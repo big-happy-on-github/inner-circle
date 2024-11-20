@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mafia Game</title>
     <style>
+        /* Styling code remains the same */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -68,14 +69,14 @@
         <h1>Mafia Game</h1>
         <div id="setup">
             <input id="playerName" type="text" placeholder="Enter player name" />
-            <button onclick="addPlayer()">Add Player</button>
-            <button onclick="startGame()">Start Game</button>
+            <button id="addPlayerBtn">Add Player</button>
+            <button id="startGameBtn">Start Game</button>
         </div>
         <div class="player-list" id="playerList"></div>
         <div id="game" class="hidden">
             <h2>Game On!</h2>
             <div id="gameLog" class="game-log"></div>
-            <button onclick="nextRound()">Next Round</button>
+            <button id="nextRoundBtn">Next Round</button>
         </div>
     </div>
 
@@ -151,5 +152,24 @@
                     currentRole = "Doctor";
                     logGame("Doctor, choose someone to heal.");
                     break;
-               
+                case 2:
+                    currentRole = "Detective";
+                    logGame("Detective, investigate someone.");
+                    break;
+                case 3:
+                    logGame("The town votes to eliminate someone.");
+                    break;
+            }
 
+            currentPhase = (currentPhase + 1) % 4;
+        }
+
+        // Ensure the DOM is fully loaded before attaching event listeners
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("addPlayerBtn").addEventListener("click", addPlayer);
+            document.getElementById("startGameBtn").addEventListener("click", startGame);
+            document.getElementById("nextRoundBtn").addEventListener("click", nextRound);
+        });
+    </script>
+</body>
+</html>

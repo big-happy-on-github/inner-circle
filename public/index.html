@@ -9,7 +9,7 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background: #333;
+            background: linear-gradient(to right, #434343, #000000);
             color: white;
             display: flex;
             flex-direction: column;
@@ -19,20 +19,22 @@
         }
         .container {
             text-align: center;
-            max-width: 600px;
+            max-width: 700px;
             padding: 20px;
-            background: #444;
+            background: rgba(0, 0, 0, 0.8);
             border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
         }
         input, button {
             padding: 10px;
-            margin: 5px;
+            margin: 10px;
             border: none;
             border-radius: 5px;
         }
         button {
             background: #ff6347;
             color: white;
+            font-size: 16px;
             cursor: pointer;
         }
         button:hover {
@@ -40,6 +42,19 @@
         }
         .hidden {
             display: none;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            margin: 5px 0;
+        }
+        .player-alive {
+            color: #32cd32;
+        }
+        .player-dead {
+            color: #ff6347;
         }
     </style>
 </head>
@@ -84,7 +99,7 @@
             }
             gameId = data[0].id;
             isHost = true;
-            alert(`Game created. Code: ${code} (copy this)`);
+            alert(`Game created! Code: ${code}`);
             joinGameAsHost();
         }
 
@@ -158,7 +173,7 @@
                 return;
             }
             const playerList = document.getElementById('playerList');
-            playerList.innerHTML = `<h3>Players:</h3><ul>${players.map(p => `<li>${p.name} (${p.alive ? 'Alive' : 'Dead'})</li>`).join('')}</ul>`;
+            playerList.innerHTML = `<h3>Players:</h3><ul>${players.map(p => `<li class="${p.alive ? 'player-alive' : 'player-dead'}">${p.name} (${p.alive ? 'Alive' : 'Dead'})</li>`).join('')}</ul>`;
         }
 
         async function assignRoles() {
@@ -184,32 +199,26 @@
                 console.error(error);
                 return;
             }
+            const mafia = players.find(p => p.role === 'Mafia' && p.id === playerId);
+            const angel = players.find(p => p.role === 'Angel' && p.id === playerId);
 
-            // Mafia selects a target
-            if (players.some(p => p.role === 'Mafia' && p.id === playerId)) {
+            if (mafia) {
                 const target = prompt('Mafia, select a player to kill (name):');
                 await supabase.from('games').update({ mafia_target: target }).eq('id', gameId);
             }
-
-            // Angel selects a player to save
-            if (players.some(p => p.role === 'Angel' && p.id === playerId)) {
+            if (angel) {
                 const target = prompt('Angel, select a player to save (name):');
                 await supabase.from('games').update({ angel_target: target }).eq('id', gameId);
             }
 
-            // Wait for actions
             setTimeout(async () => {
-                const { data: gameData } = await supabase.from('games').select('*').eq('id', gameId).single();
-                const mafiaTarget = gameData.mafia_target;
-                const angelTarget = gameData.angel_target;
-
-                if (mafiaTarget !== angelTarget) {
-                    await supabase.from('players').update({ alive: false }).eq('name', mafiaTarget);
-                    alert(`${mafiaTarget} has been killed!`);
+                const { data: game } = await supabase.from('games').select('*').eq('id', gameId).single();
+                if (game.mafia_target !== game.angel_target) {
+                    await supabase.from('players').update({ alive: false }).eq('name', game.mafia_target);
+                    alert(`${game.mafia_target} has been killed!`);
                 } else {
-                    alert(`${mafiaTarget} was saved by the Angel!`);
+                    alert(`${game.mafia_target} was saved by the Angel!`);
                 }
-
                 startVoting();
             }, 5000);
         }
@@ -220,38 +229,21 @@
                 console.error(error);
                 return;
             }
-
             const votes = {};
             players.forEach(player => {
                 const vote = prompt(`${player.name}, vote for someone to execute:`);
-                if (votes[vote]) {
-                    votes[vote]++;
-                } else {
-                    votes[vote] = 1;
-                }
+                votes[vote] = (votes[vote] || 0) + 1;
             });
-
-            const maxVotes = Math.max(...Object.values(votes));
-            const executedPlayer = Object.keys(votes).find(player => votes[player] === maxVotes);
-
-            if (executedPlayer) {
-                await supabase.from('players').update({ alive: false }).eq('name', executedPlayer);
-                alert(`${executedPlayer} has been executed!`);
-            }
-
+            const executed = Object.keys(votes).reduce((a, b) => (votes[a] > votes[b] ? a : b));
+            await supabase.from('players').update({ alive: false }).eq('name', executed);
+            alert(`${executed} has been executed!`);
             checkGameEnd();
         }
 
         async function checkGameEnd() {
-            const { data: players, error } = await supabase.from('players').select('*').eq('game_id', gameId).eq('alive', true);
-            if (error) {
-                console.error(error);
-                return;
-            }
-
+            const { data: players } = await supabase.from('players').select('*').eq('game_id', gameId).eq('alive', true);
             const mafiaAlive = players.some(p => p.role === 'Mafia');
             const othersAlive = players.some(p => p.role !== 'Mafia');
-
             if (!mafiaAlive) {
                 alert('The Civilians win!');
                 resetGame();
@@ -268,6 +260,10 @@
             alert('Game over. Restarting...');
             location.reload();
         }
+
+        window.createGame = createGame;
+        window.joinGame = joinGame;
+        window.assignRoles = assignRoles;
 
         async function pollGameUpdates() {
             setInterval(async () => {
@@ -305,18 +301,20 @@
                     }
         
                     const playerList = document.getElementById('playerList');
-                    playerList.innerHTML = `<h3>Players:</h3><ul>${players.map(p => `<li>${p.name} (${p.alive ? 'Alive' : 'Dead'})</li>`).join('')}</ul>`;
+                    playerList.innerHTML = `<h3>Players:</h3><ul>${players
+                        .map(
+                            (p) =>
+                                `<li class="${p.alive ? 'player-alive' : 'player-dead'}">${p.name} (${p.alive ? 'Alive' : 'Dead'})</li>`
+                        )
+                        .join('')}</ul>`;
                 } catch (err) {
                     console.error('Polling error:', err);
                 }
-            }, 500); // Poll every 2 seconds
+            }, 500); // Poll every 500 ms
         }
-
+        
+        // Call pollGameUpdates to start polling
         pollGameUpdates();
-
-        window.createGame = createGame;
-        window.joinGame = joinGame;
-        window.assignRoles = assignRoles;
     </script>
 </body>
 </html>

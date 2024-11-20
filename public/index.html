@@ -173,7 +173,13 @@
             for (const [index, player] of shuffled.entries()) {
                 await supabase.from('players').update({ role: roles[index % roles.length] }).eq('id', player.id);
             }
-            startGame();
+            await supabase.from('games').update({ state: 'playing' }).eq('id', gameId);
+            alert('Roles assigned. Game starting!');
+        
+            // Hide the "Assign Roles" button
+            document.getElementById('assignRoles').classList.add('hidden');
+        
+            loadPlayerRole();
         }
 
         async function startGame() {
@@ -193,10 +199,20 @@
         }
 
         async function pollGameUpdates() {
+            if (!gameId) {
+                console.error('Game ID is not set. Polling stopped.');
+                return;
+            }
+        
             setInterval(async () => {
                 try {
                     // Fetch game state
-                    const { data: gameData, error: gameError } = await supabase.from('games').select('*').eq('id', gameId).single();
+                    const { data: gameData, error: gameError } = await supabase
+                        .from('games')
+                        .select('*')
+                        .eq('id', gameId)
+                        .single();
+        
                     if (gameError) {
                         console.error('Error fetching game data:', gameError);
                         return;
@@ -205,13 +221,18 @@
                     // Update game state UI
                     document.getElementById('gameState').innerText = `Game Code: ${gameData.code} | State: ${gameData.state}`;
                     
-                    // If game state is "playing," ensure actions are visible
+                    // If game state is "playing," ensure actions are visible and remove "Assign Roles" button
                     if (gameData.state === 'playing') {
                         document.getElementById('actions').classList.remove('hidden');
+                        document.getElementById('assignRoles').classList.add('hidden'); // Hide the button
                     }
         
                     // Fetch player list
-                    const { data: players, error: playersError } = await supabase.from('players').select('*').eq('game_id', gameId);
+                    const { data: players, error: playersError } = await supabase
+                        .from('players')
+                        .select('*')
+                        .eq('game_id', gameId);
+        
                     if (playersError) {
                         console.error('Error fetching players:', playersError);
                         return;

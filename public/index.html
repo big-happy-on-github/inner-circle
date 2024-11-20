@@ -3,318 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mafia Game</title>
+    <title>3D Scene - People Around a Table</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
             margin: 0;
-            padding: 0;
-            background: linear-gradient(to right, #434343, #000000);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
+            overflow: hidden;
         }
-        .container {
-            text-align: center;
-            max-width: 700px;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-        }
-        input, button {
-            padding: 10px;
-            margin: 10px;
-            border: none;
-            border-radius: 5px;
-        }
-        button {
-            background: #ff6347;
-            color: white;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        button:hover {
-            background: #ff8567;
-        }
-        .hidden {
-            display: none;
-        }
-        ul {
-            list-style: none;
-            padding: 0;
-        }
-        li {
-            margin: 5px 0;
-        }
-        .player-alive {
-            color: #32cd32;
-        }
-        .player-dead {
-            color: #ff6347;
+        canvas {
+            display: block;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Mafia Game</h1>
-        <div id="joinCreate">
-            <button onclick="createGame()">Create Game</button>
-            <div>
-                <input id="gameCode" type="text" placeholder="Enter game code" />
-                <button onclick="joinGame()">Join Game</button>
-            </div>
-        </div>
-        <div id="game" class="hidden">
-            <h2 id="gameState"></h2>
-            <button id="assignRoles" class="hidden" onclick="assignRoles()">Assign Roles</button>
-            <div id="playerList"></div>
-            <div id="actions" class="hidden">
-                <h3>Your Role: <span id="role"></span></h3>
-            </div>
-        </div>
-    </div>
-
     <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
-        const supabaseUrl = 'https://tenhmgsctyyoppqqnext.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlbmhtZ3NjdHl5b3BwcXFuZXh0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczMjA2MTUyNiwiZXhwIjoyMDQ3NjM3NTI2fQ.xmuW6QmDxOblHyoU_aXnZv2Go0BMTFOKR50lZjyO2pM';
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
-        let gameId = null;
-        let playerId = null;
-        let isHost = false;
-
-        async function createGame() {
-            const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-            const { data, error } = await supabase.from('games').insert([{ code, state: 'waiting' }]).select();
-            if (error) {
-                alert('Error creating game.');
-                console.error(error);
-                return;
-            }
-            gameId = data[0].id;
-            isHost = true;
-            alert(`Game created! Code: ${code}`);
-            joinGameAsHost();
-        }
-
-        async function joinGame() {
-            const code = document.getElementById('gameCode').value.trim().toUpperCase();
-            if (!code) {
-                alert('Enter a valid game code.');
-                return;
-            }
-            const { data, error } = await supabase.from('games').select('*').eq('code', code).single();
-            if (error || !data) {
-                alert('Game not found.');
-                console.error(error);
-                return;
-            }
-            gameId = data.id;
-            joinGameAsPlayer();
-        }
-
-        async function joinGameAsHost() {
-            const name = prompt('Enter your name:');
-            if (!name) return;
-            const { data, error } = await supabase
-                .from('players')
-                .insert([{ name, game_id: gameId, is_host: true, alive: true }])
-                .select();
-            if (error) {
-                alert('Error joining game.');
-                console.error(error);
-                return;
-            }
-            playerId = data[0].id;
-            isHost = true;
-            showGame();
-        }
-
-        async function joinGameAsPlayer() {
-            const name = prompt('Enter your name:');
-            if (!name) return;
-            const { data, error } = await supabase
-                .from('players')
-                .insert([{ name, game_id: gameId, is_host: false, alive: true }])
-                .select();
-            if (error) {
-                alert('Error joining game.');
-                console.error(error);
-                return;
-            }
-            playerId = data[0].id;
-            showGame();
-        }
-
-        async function showGame() {
-            document.getElementById('joinCreate').classList.add('hidden');
-            document.getElementById('game').classList.remove('hidden');
-            const { data, error } = await supabase.from('games').select('*').eq('id', gameId).single();
-            if (error || !data) {
-                alert('Error loading game.');
-                console.error(error);
-                return;
-            }
-            document.getElementById('gameState').innerText = `Game Code: ${data.code}`;
-            if (isHost) document.getElementById('assignRoles').classList.remove('hidden');
-            loadPlayers();
-        }
-
-        async function loadPlayers() {
-            const { data: players, error } = await supabase.from('players').select('*').eq('game_id', gameId);
-            if (error) {
-                console.error(error);
-                return;
-            }
-            const playerList = document.getElementById('playerList');
-            playerList.innerHTML = `<h3>Players:</h3><ul>${players.map(p => `<li class="${p.alive ? 'player-alive' : 'player-dead'}">${p.name} (${p.alive ? 'Alive' : 'Dead'})</li>`).join('')}</ul>`;
-        }
-
-        async function assignRoles() {
-            const roles = ['Mafia', 'Angel', 'Civilian'];
-            const { data: players, error } = await supabase.from('players').select('*').eq('game_id', gameId);
-            if (error || players.length < 3) {
-                alert('Not enough players to start.');
-                return;
-            }
-            const shuffled = players.sort(() => 0.5 - Math.random());
-            for (const [index, player] of shuffled.entries()) {
-                await supabase.from('players').update({ role: roles[index % roles.length] }).eq('id', player.id);
-            }
-            await supabase.from('games').update({ state: 'playing' }).eq('id', gameId);
-            alert('Roles assigned. Game starting!');
-            document.getElementById('assignRoles').classList.add('hidden');
-            startRound();
-        }
-
-        async function startRound() {
-            const { data: players, error } = await supabase.from('players').select('*').eq('game_id', gameId);
-            if (error) {
-                console.error(error);
-                return;
-            }
-            const mafia = players.find(p => p.role === 'Mafia' && p.id === playerId);
-            const angel = players.find(p => p.role === 'Angel' && p.id === playerId);
-
-            if (mafia) {
-                const target = prompt('Mafia, select a player to kill (name):');
-                await supabase.from('games').update({ mafia_target: target }).eq('id', gameId);
-            }
-            if (angel) {
-                const target = prompt('Angel, select a player to save (name):');
-                await supabase.from('games').update({ angel_target: target }).eq('id', gameId);
-            }
-
-            setTimeout(async () => {
-                const { data: game } = await supabase.from('games').select('*').eq('id', gameId).single();
-                if (game.mafia_target !== game.angel_target) {
-                    await supabase.from('players').update({ alive: false }).eq('name', game.mafia_target);
-                    alert(`${game.mafia_target} has been killed!`);
-                } else {
-                    alert(`${game.mafia_target} was saved by the Angel!`);
-                }
-                startVoting();
-            }, 5000);
-        }
-
-        async function startVoting() {
-            const { data: players, error } = await supabase.from('players').select('*').eq('game_id', gameId).eq('alive', true);
-            if (error) {
-                console.error(error);
-                return;
-            }
-            const votes = {};
-            players.forEach(player => {
-                const vote = prompt(`${player.name}, vote for someone to execute:`);
-                votes[vote] = (votes[vote] || 0) + 1;
-            });
-            const executed = Object.keys(votes).reduce((a, b) => (votes[a] > votes[b] ? a : b));
-            await supabase.from('players').update({ alive: false }).eq('name', executed);
-            alert(`${executed} has been executed!`);
-            checkGameEnd();
-        }
-
-        async function checkGameEnd() {
-            const { data: players } = await supabase.from('players').select('*').eq('game_id', gameId).eq('alive', true);
-            const mafiaAlive = players.some(p => p.role === 'Mafia');
-            const othersAlive = players.some(p => p.role !== 'Mafia');
-            if (!mafiaAlive) {
-                alert('The Civilians win!');
-                resetGame();
-            } else if (!othersAlive) {
-                alert('The Mafia wins!');
-                resetGame();
-            } else {
-                startRound();
-            }
-        }
-
-        async function resetGame() {
-            await supabase.from('games').update({ state: 'waiting', mafia_target: null, angel_target: null }).eq('id', gameId);
-            alert('Game over. Restarting...');
-            location.reload();
-        }
-
-        window.createGame = createGame;
-        window.joinGame = joinGame;
-        window.assignRoles = assignRoles;
-
-        async function pollGameUpdates() {
-            setInterval(async () => {
-                try {
-                    // Fetch the current game state
-                    const { data: gameData, error: gameError } = await supabase
-                        .from('games')
-                        .select('*')
-                        .eq('id', gameId)
-                        .single();
+        import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.155.0/three.min.js";
         
-                    if (gameError) {
-                        console.error('Error fetching game data:', gameError);
-                        return;
-                    }
-        
-                    // Update the game state UI
-                    document.getElementById('gameState').innerText = `Game Code: ${gameData.code} | State: ${gameData.state}`;
-        
-                    // If the game state is "playing," show the actions panel
-                    if (gameData.state === 'playing') {
-                        document.getElementById('actions').classList.remove('hidden');
-                        document.getElementById('assignRoles').classList.add('hidden');
-                    }
-        
-                    // Fetch and update the player list
-                    const { data: players, error: playersError } = await supabase
-                        .from('players')
-                        .select('*')
-                        .eq('game_id', gameId);
-        
-                    if (playersError) {
-                        console.error('Error fetching players:', playersError);
-                        return;
-                    }
-        
-                    const playerList = document.getElementById('playerList');
-                    playerList.innerHTML = `<h3>Players:</h3><ul>${players
-                        .map(
-                            (p) =>
-                                `<li class="${p.alive ? 'player-alive' : 'player-dead'}">${p.name} (${p.alive ? 'Alive' : 'Dead'})</li>`
-                        )
-                        .join('')}</ul>`;
-                } catch (err) {
-                    console.error('Polling error:', err);
-                }
-            }, 500); // Poll every 500 ms
+        // Scene, Camera, Renderer
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Table
+        const tableGeometry = new THREE.CylinderGeometry(5, 5, 0.5, 32);
+        const tableMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+        const table = new THREE.Mesh(tableGeometry, tableMaterial);
+        table.position.y = 0;
+        scene.add(table);
+
+        // People (represented as spheres)
+        const personGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+        const personColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00];
+        const positions = [
+            [3, 1, 0],
+            [-3, 1, 0],
+            [0, 1, 3],
+            [0, 1, -3]
+        ];
+
+        positions.forEach((position, index) => {
+            const personMaterial = new THREE.MeshStandardMaterial({ color: personColors[index] });
+            const person = new THREE.Mesh(personGeometry, personMaterial);
+            person.position.set(...position);
+            scene.add(person);
+        });
+
+        // Light
+        const light = new THREE.PointLight(0xffffff, 1, 100);
+        light.position.set(0, 10, 10);
+        scene.add(light);
+
+        // Camera position
+        camera.position.z = 15;
+        camera.position.y = 5;
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
         }
-        
-        // Call pollGameUpdates to start polling
-        pollGameUpdates();
+
+        animate();
     </script>
 </body>
 </html>

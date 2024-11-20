@@ -192,6 +192,42 @@
             document.getElementById('actions').classList.remove('hidden');
         }
 
+        async function pollGameUpdates() {
+            setInterval(async () => {
+                try {
+                    // Fetch game state
+                    const { data: gameData, error: gameError } = await supabase.from('games').select('*').eq('id', gameId).single();
+                    if (gameError) {
+                        console.error('Error fetching game data:', gameError);
+                        return;
+                    }
+        
+                    // Update game state UI
+                    document.getElementById('gameState').innerText = `Game Code: ${gameData.code} | State: ${gameData.state}`;
+                    
+                    // If game state is "playing," ensure actions are visible
+                    if (gameData.state === 'playing') {
+                        document.getElementById('actions').classList.remove('hidden');
+                    }
+        
+                    // Fetch player list
+                    const { data: players, error: playersError } = await supabase.from('players').select('*').eq('game_id', gameId);
+                    if (playersError) {
+                        console.error('Error fetching players:', playersError);
+                        return;
+                    }
+        
+                    // Update player list UI
+                    const playerList = document.getElementById('playerList');
+                    playerList.innerHTML = `<h3>Players:</h3><ul>${players.map(p => `<li>${p.name} (${p.alive ? 'Alive' : 'Dead'})</li>`).join('')}</ul>`;
+                } catch (err) {
+                    console.error('Polling error:', err);
+                }
+            }, 500); // Recheck every 500 milliseconds
+        }
+
+        pollGameUpdates();
+
         window.createGame = createGame;
         window.joinGame = joinGame;
         window.assignRoles = assignRoles;

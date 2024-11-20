@@ -198,12 +198,7 @@
             document.getElementById('actions').classList.remove('hidden');
         }
 
-        async function pollGameUpdates() {
-            if (!gameId) {
-                console.error('Game ID is not set. Polling stopped.');
-                return;
-            }
-        
+        async function pollGameUpdates() {        
             setInterval(async () => {
                 try {
                     // Fetch game state

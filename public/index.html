@@ -3,11 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mafia Party Game</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Mafia Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #333;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 600px;
+            padding: 20px;
+            background: #444;
+            border-radius: 10px;
+        }
+
+        h1 {
+            color: #ff6347;
+        }
+
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button {
+            background: #ff6347;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #ff8567;
+        }
+
+        .player-list, .game-log {
+            margin-top: 20px;
+        }
+
+        .player {
+            padding: 5px;
+            background: #555;
+            margin: 5px;
+            border-radius: 5px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
 <body>
-    <div id="game-container"></div>
-    <script type="module" src="script.js"></script>
-</body>
-</html>
+    <div class="container">
+        <h1>Mafia Game</h1>
+        <div id="setup">
+            <input id="playerName" type="text" placeholder="Enter player name" />
+            <button onclick="addPlayer()">Add Player</button>
+            <button onclick="startGame()">Start Game</button>
+        </div>
+        <div class="player-list" id="playerList"></div>
+        <div id="game" class="hidden">
+            <h2>Game On!</h2>
+            <div id="gameLog" class="game-log"></div>
+            <button onclick="nextRound()">Next Round</button>
+        </div>
+    </div>
+
+    <script>
+        const players = [];
+        const roles = ["Mafia", "Doctor", "Detective", "Civilian"];
+        let currentPhase = 0;
+        let currentRole = "";
+
+        function addPlayer() {
+            const name = document.getElementById("playerName").value.trim();
+            if (name) {
+                players.push({ name, role: "", alive: true });
+                updatePlayerList();
+                document.getElementById("playerName").value = "";
+            } else {
+                alert("Player name cannot be empty.");
+            }
+        }
+
+        function updatePlayerList() {
+            const list = document.getElementById("playerList");
+            list.innerHTML = "";
+            players.forEach(player => {
+                const div = document.createElement("div");
+                div.className = "player";
+                div.textContent = player.name;
+                list.appendChild(div);
+            });
+        }
+
+        function startGame() {
+            if (players.length < 4) {
+                alert("You need at least 4 players to play.");
+                return;
+            }
+            assignRoles();
+            document.getElementById("setup").classList.add("hidden");
+            document.getElementById("game").classList.remove("hidden");
+            logGame("Roles have been assigned. Let the game begin!");
+        }
+
+        function assignRoles() {
+            const shuffledPlayers = players.sort(() => 0.5 - Math.random());
+            shuffledPlayers.forEach((player, index) => {
+                player.role = roles[index % roles.length];
+            });
+        }
+
+        function logGame(message) {
+            const log = document.getElementById("gameLog");
+            const entry = document.createElement("div");
+            entry.textContent = message;
+            log.appendChild(entry);
+        }
+
+        function nextRound() {
+            const alivePlayers = players.filter(player => player.alive);
+            if (alivePlayers.length <= 2) {
+                const winner = alivePlayers.some(player => player.role === "Mafia")
+                    ? "Mafia"
+                    : "Civilians";
+                logGame(`Game over! ${winner} win.`);
+                return;
+            }
+
+            switch (currentPhase) {
+                case 0:
+                    currentRole = "Mafia";
+                    logGame("Mafia, choose a target.");
+                    break;
+                case 1:
+                    currentRole = "Doctor";
+                    logGame("Doctor, choose someone to heal.");
+                    break;
+               
+

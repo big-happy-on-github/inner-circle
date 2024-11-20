@@ -269,6 +269,51 @@
             location.reload();
         }
 
+        async function pollGameUpdates() {
+            setInterval(async () => {
+                try {
+                    // Fetch the current game state
+                    const { data: gameData, error: gameError } = await supabase
+                        .from('games')
+                        .select('*')
+                        .eq('id', gameId)
+                        .single();
+        
+                    if (gameError) {
+                        console.error('Error fetching game data:', gameError);
+                        return;
+                    }
+        
+                    // Update the game state UI
+                    document.getElementById('gameState').innerText = `Game Code: ${gameData.code} | State: ${gameData.state}`;
+        
+                    // If the game state is "playing," show the actions panel
+                    if (gameData.state === 'playing') {
+                        document.getElementById('actions').classList.remove('hidden');
+                        document.getElementById('assignRoles').classList.add('hidden');
+                    }
+        
+                    // Fetch and update the player list
+                    const { data: players, error: playersError } = await supabase
+                        .from('players')
+                        .select('*')
+                        .eq('game_id', gameId);
+        
+                    if (playersError) {
+                        console.error('Error fetching players:', playersError);
+                        return;
+                    }
+        
+                    const playerList = document.getElementById('playerList');
+                    playerList.innerHTML = `<h3>Players:</h3><ul>${players.map(p => `<li>${p.name} (${p.alive ? 'Alive' : 'Dead'})</li>`).join('')}</ul>`;
+                } catch (err) {
+                    console.error('Polling error:', err);
+                }
+            }, 500); // Poll every 2 seconds
+        }
+
+        pollGameUpdates();
+
         window.createGame = createGame;
         window.joinGame = joinGame;
         window.assignRoles = assignRoles;

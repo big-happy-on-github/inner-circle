@@ -55,7 +55,12 @@
         </div>
         <div id="game" class="hidden">
             <h2 id="gameState"></h2>
-            <div id="actions" class="hidden"></div>
+            <button id="assignRoles" class="hidden" onclick="assignRoles()">Assign Roles</button>
+            <div id="playerList"></div>
+            <div id="actions" class="hidden">
+                <h3>Your Role: <span id="role"></span></h3>
+                <div id="targetActions"></div>
+            </div>
         </div>
     </div>
 
@@ -63,39 +68,25 @@
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
         const supabaseUrl = 'https://tenhmgsctyyoppqqnext.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlbmhtZ3NjdHl5b3BwcXFuZXh0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczMjA2MTUyNiwiZXhwIjoyMDQ3NjM3NTI2fQ.xmuW6QmDxOblHyoU_aXnZv2Go0BMTFOKR50lZjyO2pM';
+        const supabaseKey = 'YOUR_SUPABASE_KEY';
         const supabase = createClient(supabaseUrl, supabaseKey);
 
         let gameId = null;
         let playerId = null;
+        let isHost = false;
 
         async function createGame() {
             const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-            try {
-                const { data, error } = await supabase
-                    .from('games')
-                    .insert([{ code, state: 'waiting', players: [] }])
-                    .select(); // Ensure the response includes the inserted row.
-        
-                if (error) {
-                    console.error('Error creating game:', error);
-                    alert('Error creating game. Please try again.');
-                    return;
-                }
-        
-                if (!data || data.length === 0) {
-                    console.error('Unexpected response:', data);
-                    alert('Game creation failed. Please try again.');
-                    return;
-                }
-        
-                gameId = data[0].id;
-                alert(`Game created! Code: ${code}`);
-                joinGameAsHost(gameId);
-            } catch (err) {
-                console.error('Unexpected error:', err);
-                alert('An unexpected error occurred. Please try again.');
+            const { data, error } = await supabase.from('games').insert([{ code, state: 'waiting' }]).select();
+            if (error) {
+                alert('Error creating game.');
+                console.error(error);
+                return;
             }
+            gameId = data[0].id;
+            isHost = true;
+            alert(`Game created! Code: ${code}`);
+            joinGameAsHost();
         }
 
         async function joinGame() {
@@ -104,22 +95,22 @@
                 alert('Enter a valid game code.');
                 return;
             }
-            const { data, error } = await supabase.from('games').select('*').eq('code', code).single().select();
+            const { data, error } = await supabase.from('games').select('*').eq('code', code).single();
             if (error || !data) {
                 alert('Game not found.');
                 console.error(error);
                 return;
             }
             gameId = data.id;
-            joinGameAsPlayer(gameId);
+            joinGameAsPlayer();
         }
 
-        async function joinGameAsHost(gameId) {
+        async function joinGameAsHost() {
             const name = prompt('Enter your name:');
             if (!name) return;
             const { data, error } = await supabase
                 .from('players')
-                .insert([{ name, game_id: gameId, role: '', is_host: true, alive: true }])
+                .insert([{ name, game_id: gameId, is_host: true, alive: true }])
                 .select();
             if (error) {
                 alert('Error joining game.');
@@ -127,15 +118,16 @@
                 return;
             }
             playerId = data[0].id;
+            isHost = true;
             showGame();
         }
 
-        async function joinGameAsPlayer(gameId) {
+        async function joinGameAsPlayer() {
             const name = prompt('Enter your name:');
             if (!name) return;
             const { data, error } = await supabase
                 .from('players')
-                .insert([{ name, game_id: gameId, role: '', is_host: false, alive: true }])
+                .insert([{ name, game_id: gameId, is_host: false, alive: true }])
                 .select();
             if (error) {
                 alert('Error joining game.');
@@ -149,17 +141,25 @@
         async function showGame() {
             document.getElementById('joinCreate').classList.add('hidden');
             document.getElementById('game').classList.remove('hidden');
-            const { data, error } = await supabase
-                .from('games')
-                .select('*')
-                .eq('id', gameId)
-                .single();
+            const { data, error } = await supabase.from('games').select('*').eq('id', gameId).single();
             if (error || !data) {
                 alert('Error loading game.');
                 console.error(error);
                 return;
             }
             document.getElementById('gameState').innerText = `Game Code: ${data.code}`;
+            if (isHost) document.getElementById('assignRoles').classList.remove('hidden');
+            loadPlayers();
+        }
+
+        async function loadPlayers() {
+            const { data: players, error } = await supabase.from('players').select('*').eq('game_id', gameId);
+            if (error) {
+                console.error(error);
+                return;
+            }
+            const playerList = document.getElementById('playerList');
+            playerList.innerHTML = `<h3>Players:</h3><ul>${players.map(p => `<li>${p.name} (${p.alive ? 'Alive' : 'Dead'})</li>`).join('')}</ul>`;
         }
 
         async function assignRoles() {
@@ -170,28 +170,26 @@
                 return;
             }
             const shuffled = players.sort(() => 0.5 - Math.random());
-            shuffled.forEach((player, index) => {
-                supabase
-                    .from('players')
-                    .update({ role: roles[index % roles.length] })
-                    .eq('id', player.id);
-            });
+            for (const [index, player] of shuffled.entries()) {
+                await supabase.from('players').update({ role: roles[index % roles.length] }).eq('id', player.id);
+            }
             startGame();
         }
 
         async function startGame() {
             await supabase.from('games').update({ state: 'playing' }).eq('id', gameId);
-            document.getElementById('actions').classList.remove('hidden');
+            alert('Roles assigned. Game starting!');
+            loadPlayerRole();
         }
 
-        async function takeAction(action, targetId) {
-            const { error } = await supabase.from('actions').insert([{ game_id: gameId, player_id: playerId, action, target_id: targetId }]);
+        async function loadPlayerRole() {
+            const { data, error } = await supabase.from('players').select('role').eq('id', playerId).single();
             if (error) {
-                alert('Error taking action.');
                 console.error(error);
                 return;
             }
-            alert(`Action ${action} taken!`);
+            document.getElementById('role').innerText = data.role;
+            document.getElementById('actions').classList.remove('hidden');
         }
 
         window.createGame = createGame;

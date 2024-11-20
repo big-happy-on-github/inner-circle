@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mafia Game</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <style>
-        /* Styling code remains the same */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -18,7 +18,6 @@
             justify-content: center;
             min-height: 100vh;
         }
-
         .container {
             text-align: center;
             max-width: 600px;
@@ -26,39 +25,20 @@
             background: #444;
             border-radius: 10px;
         }
-
-        h1 {
-            color: #ff6347;
-        }
-
         input, button {
             padding: 10px;
             margin: 5px;
             border: none;
             border-radius: 5px;
         }
-
         button {
             background: #ff6347;
             color: white;
             cursor: pointer;
         }
-
         button:hover {
             background: #ff8567;
         }
-
-        .player-list, .game-log {
-            margin-top: 20px;
-        }
-
-        .player {
-            padding: 5px;
-            background: #555;
-            margin: 5px;
-            border-radius: 5px;
-        }
-
         .hidden {
             display: none;
         }
@@ -67,109 +47,134 @@
 <body>
     <div class="container">
         <h1>Mafia Game</h1>
-        <div id="setup">
-            <input id="playerName" type="text" placeholder="Enter player name" />
-            <button id="addPlayerBtn">Add Player</button>
-            <button id="startGameBtn">Start Game</button>
+        <div id="joinCreate">
+            <button onclick="createGame()">Create Game</button>
+            <div>
+                <input id="gameCode" type="text" placeholder="Enter game code" />
+                <button onclick="joinGame()">Join Game</button>
+            </div>
         </div>
-        <div class="player-list" id="playerList"></div>
         <div id="game" class="hidden">
-            <h2>Game On!</h2>
-            <div id="gameLog" class="game-log"></div>
-            <button id="nextRoundBtn">Next Round</button>
+            <h2 id="gameState"></h2>
+            <div id="actions" class="hidden"></div>
         </div>
     </div>
 
     <script>
-        const players = [];
-        const roles = ["Mafia", "Doctor", "Detective", "Civilian"];
-        let currentPhase = 0;
-        let currentRole = "";
+        // Supabase configuration
+        const supabaseUrl = 'https://tenhmgsctyyoppqqnext.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlbmhtZ3NjdHl5b3BwcXFuZXh0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczMjA2MTUyNiwiZXhwIjoyMDQ3NjM3NTI2fQ.xmuW6QmDxOblHyoU_aXnZv2Go0BMTFOKR50lZjyO2pM';
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-        function addPlayer() {
-            const name = document.getElementById("playerName").value.trim();
-            if (name) {
-                players.push({ name, role: "", alive: true });
-                updatePlayerList();
-                document.getElementById("playerName").value = "";
-            } else {
-                alert("Player name cannot be empty.");
-            }
-        }
+        let gameId = null;
+        let playerId = null;
 
-        function updatePlayerList() {
-            const list = document.getElementById("playerList");
-            list.innerHTML = "";
-            players.forEach(player => {
-                const div = document.createElement("div");
-                div.className = "player";
-                div.textContent = player.name;
-                list.appendChild(div);
-            });
-        }
-
-        function startGame() {
-            if (players.length < 4) {
-                alert("You need at least 4 players to play.");
+        async function createGame() {
+            const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const { data, error } = await supabase.from('games').insert([{ code, state: 'waiting', players: [] }]);
+            if (error) {
+                alert('Error creating game');
+                console.error(error);
                 return;
             }
-            assignRoles();
-            document.getElementById("setup").classList.add("hidden");
-            document.getElementById("game").classList.remove("hidden");
-            logGame("Roles have been assigned. Let the game begin!");
+            gameId = data[0].id;
+            alert(`Game created! Code: ${code}`);
+            joinGameAsHost(gameId);
         }
 
-        function assignRoles() {
-            const shuffledPlayers = players.sort(() => 0.5 - Math.random());
-            shuffledPlayers.forEach((player, index) => {
-                player.role = roles[index % roles.length];
-            });
-        }
-
-        function logGame(message) {
-            const log = document.getElementById("gameLog");
-            const entry = document.createElement("div");
-            entry.textContent = message;
-            log.appendChild(entry);
-        }
-
-        function nextRound() {
-            const alivePlayers = players.filter(player => player.alive);
-            if (alivePlayers.length <= 2) {
-                const winner = alivePlayers.some(player => player.role === "Mafia")
-                    ? "Mafia"
-                    : "Civilians";
-                logGame(`Game over! ${winner} win.`);
+        async function joinGame() {
+            const code = document.getElementById('gameCode').value.trim().toUpperCase();
+            if (!code) {
+                alert('Enter a valid game code.');
                 return;
             }
-
-            switch (currentPhase) {
-                case 0:
-                    currentRole = "Mafia";
-                    logGame("Mafia, choose a target.");
-                    break;
-                case 1:
-                    currentRole = "Doctor";
-                    logGame("Doctor, choose someone to heal.");
-                    break;
-                case 2:
-                    currentRole = "Detective";
-                    logGame("Detective, investigate someone.");
-                    break;
-                case 3:
-                    logGame("The town votes to eliminate someone.");
-                    break;
+            const { data, error } = await supabase.from('games').select('*').eq('code', code).single();
+            if (error || !data) {
+                alert('Game not found.');
+                console.error(error);
+                return;
             }
-
-            currentPhase = (currentPhase + 1) % 4;
+            gameId = data.id;
+            joinGameAsPlayer(gameId);
         }
 
-        // Ensure the DOM is fully loaded before attaching event listeners
-        document.addEventListener("DOMContentLoaded", () => {
-            document.getElementById("addPlayerBtn").addEventListener("click", addPlayer);
-            document.getElementById("startGameBtn").addEventListener("click", startGame);
-            document.getElementById("nextRoundBtn").addEventListener("click", nextRound);
-        });
+        async function joinGameAsHost(gameId) {
+            const name = prompt('Enter your name:');
+            if (!name) return;
+            const { data, error } = await supabase
+                .from('players')
+                .insert([{ name, game_id: gameId, role: '', is_host: true, alive: true }]);
+            if (error) {
+                alert('Error joining game.');
+                console.error(error);
+                return;
+            }
+            playerId = data[0].id;
+            showGame();
+        }
+
+        async function joinGameAsPlayer(gameId) {
+            const name = prompt('Enter your name:');
+            if (!name) return;
+            const { data, error } = await supabase
+                .from('players')
+                .insert([{ name, game_id: gameId, role: '', is_host: false, alive: true }]);
+            if (error) {
+                alert('Error joining game.');
+                console.error(error);
+                return;
+            }
+            playerId = data[0].id;
+            showGame();
+        }
+
+        async function showGame() {
+            document.getElementById('joinCreate').classList.add('hidden');
+            document.getElementById('game').classList.remove('hidden');
+            const { data, error } = await supabase
+                .from('games')
+                .select('*')
+                .eq('id', gameId)
+                .single();
+            if (error || !data) {
+                alert('Error loading game.');
+                console.error(error);
+                return;
+            }
+            document.getElementById('gameState').innerText = `Game Code: ${data.code}`;
+        }
+
+        async function assignRoles() {
+            const roles = ['Mafia', 'Doctor', 'Detective', 'Civilian'];
+            const { data: players, error } = await supabase.from('players').select('*').eq('game_id', gameId);
+            if (error || players.length < 4) {
+                alert('Not enough players to start.');
+                return;
+            }
+            const shuffled = players.sort(() => 0.5 - Math.random());
+            shuffled.forEach((player, index) => {
+                supabase
+                    .from('players')
+                    .update({ role: roles[index % roles.length] })
+                    .eq('id', player.id);
+            });
+            startGame();
+        }
+
+        async function startGame() {
+            await supabase.from('games').update({ state: 'playing' }).eq('id', gameId);
+            document.getElementById('actions').classList.remove('hidden');
+        }
+
+        async function takeAction(action, targetId) {
+            const { error } = await supabase.from('actions').insert([{ game_id: gameId, player_id: playerId, action, target_id: targetId }]);
+            if (error) {
+                alert('Error taking action.');
+                console.error(error);
+                return;
+            }
+            alert(`Action ${action} taken!`);
+        }
     </script>
 </body>
 </html>

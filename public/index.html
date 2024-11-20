@@ -68,7 +68,7 @@
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
         const supabaseUrl = 'https://tenhmgsctyyoppqqnext.supabase.co';
-        const supabaseKey = 'YOUR_SUPABASE_KEY';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlbmhtZ3NjdHl5b3BwcXFuZXh0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczMjA2MTUyNiwiZXhwIjoyMDQ3NjM3NTI2fQ.xmuW6QmDxOblHyoU_aXnZv2Go0BMTFOKR50lZjyO2pM';
         const supabase = createClient(supabaseUrl, supabaseKey);
 
         let gameId = null;
@@ -85,7 +85,7 @@
             }
             gameId = data[0].id;
             isHost = true;
-            alert(`Game created! Code: ${code}`);
+            alert(`game created. code: ${code} (copy this)`);
             joinGameAsHost();
         }
 

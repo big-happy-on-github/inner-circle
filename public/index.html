@@ -216,10 +216,11 @@
                     // Update game state UI
                     document.getElementById('gameState').innerText = `Game Code: ${gameData.code} | State: ${gameData.state}`;
                     
-                    // If game state is "playing," ensure actions are visible and remove "Assign Roles" button
+                    // If game state is "playing," load player's role
                     if (gameData.state === 'playing') {
                         document.getElementById('actions').classList.remove('hidden');
                         document.getElementById('assignRoles').classList.add('hidden'); // Hide the button
+                        loadPlayerRole(); // Ensure all players load their roles
                     }
         
                     // Fetch player list

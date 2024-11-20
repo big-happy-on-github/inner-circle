@@ -135,7 +135,8 @@
             if (!name) return;
             const { data, error } = await supabase
                 .from('players')
-                .insert([{ name, game_id: gameId, role: '', is_host: false, alive: true }]);
+                .insert([{ name, game_id: gameId, role: '', is_host: false, alive: true }])
+                .select();
             if (error) {
                 alert('Error joining game.');
                 console.error(error);

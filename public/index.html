@@ -104,7 +104,7 @@
                 alert('Enter a valid game code.');
                 return;
             }
-            const { data, error } = await supabase.from('games').select('*').eq('code', code).single();
+            const { data, error } = await supabase.from('games').select('*').eq('code', code).single().select();
             if (error || !data) {
                 alert('Game not found.');
                 console.error(error);
@@ -119,7 +119,8 @@
             if (!name) return;
             const { data, error } = await supabase
                 .from('players')
-                .insert([{ name, game_id: gameId, role: '', is_host: true, alive: true }]);
+                .insert([{ name, game_id: gameId, role: '', is_host: true, alive: true }])
+                .select();
             if (error) {
                 alert('Error joining game.');
                 console.error(error);

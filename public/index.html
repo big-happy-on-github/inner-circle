@@ -71,15 +71,31 @@
 
         async function createGame() {
             const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-            const { data, error } = await supabase.from('games').insert([{ code, state: 'waiting', players: [] }]);
-            if (error) {
-                alert('Error creating game');
-                console.error(error);
-                return;
+            try {
+                const { data, error } = await supabase
+                    .from('games')
+                    .insert([{ code, state: 'waiting', players: [] }])
+                    .select(); // Ensure the response includes the inserted row.
+        
+                if (error) {
+                    console.error('Error creating game:', error);
+                    alert('Error creating game. Please try again.');
+                    return;
+                }
+        
+                if (!data || data.length === 0) {
+                    console.error('Unexpected response:', data);
+                    alert('Game creation failed. Please try again.');
+                    return;
+                }
+        
+                gameId = data[0].id;
+                alert(`Game created! Code: ${code}`);
+                joinGameAsHost(gameId);
+            } catch (err) {
+                console.error('Unexpected error:', err);
+                alert('An unexpected error occurred. Please try again.');
             }
-            gameId = data[0].id;
-            alert(`Game created! Code: ${code}`);
-            joinGameAsHost(gameId);
         }
 
         async function joinGame() {

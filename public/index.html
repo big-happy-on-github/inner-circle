@@ -88,9 +88,9 @@
                 const extraImg = new Image();
                 extraImg.src = "/imgs/table.png";
                 extraImg.onload = function () {
-                    const x = (canvas.width - extraImg.width) / 2;
-                    const y = (canvas.height - extraImg.height) / 2;
-                    ctx.drawImage(extraImg, x, y, extraImg.width*8, extraImg.height*8);
+                    const x = (canvas.width - extraImg.width*4) / 2;
+                    const y = (canvas.height - extraImg.height*4) / 2;
+                    ctx.drawImage(extraImg, x, y, extraImg.width*4, extraImg.height*4);
                 };
             }).catch(error => {
                 console.error("Failed to load one or more images:", error);

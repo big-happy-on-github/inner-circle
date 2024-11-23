@@ -112,7 +112,7 @@
 
     <main>
         <div id="info">
-            <p>mafia</p>
+            <p>mafia game</p>
             <p id="code"></p>
             <ul id="players"></ul>
         </div>
@@ -180,7 +180,7 @@
             const gap = 20; // Gap between images
             const totalImageWidth = players.length * imageSize + (players.length - 1) * gap;
             const startX = (canvas.width - totalImageWidth) / 2; // Center the images
-            const y = (canvas.height - imageSize) / 2; // Center vertically
+            const y = (canvas.height - imageSize) / 2 - 200; // Center vertically
         
             let currentX = startX;
         
@@ -207,6 +207,11 @@
                     currentX += imageSize + gap; // Move to the next position
                 };
             });
+            const img = new Image();
+            img.src = "/imgs/table.png";
+            img.onload = () => {
+                ctx.drawImage(img, currentX, y);
+            };
         }
     
         // Function to add a new player to the game
@@ -283,6 +288,7 @@
                 const { data, error } = await supabase
                     .from('games')
                     .insert([{ game_code: code }]);
+                addPlayer(code);
             }
             setupRealTimeUpdates(code);
         }

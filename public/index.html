@@ -175,18 +175,36 @@
         // Function to render players on the canvas
         function renderPlayersOnCanvas(players) {
             ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
-    
-            const gap = 20;
-            const totalImageWidth = players.length * 100 + (players.length - 1) * gap;
-            let startX = (canvas.width - totalImageWidth) / 2;
-    
+        
+            const imageSize = 300; // Set image size to 300x300
+            const gap = 20; // Gap between images
+            const totalImageWidth = players.length * imageSize + (players.length - 1) * gap;
+            const startX = (canvas.width - totalImageWidth) / 2; // Center the images
+            const y = (canvas.height - imageSize) / 2; // Center vertically
+        
+            let currentX = startX;
+        
             players.forEach(player => {
                 const img = new Image();
                 img.src = player.image;
                 img.onload = () => {
-                    const y = (canvas.height - img.height) / 2 - 100;
-                    ctx.drawImage(img, startX, y);
-                    startX += img.width + gap;
+                    // Draw circular image
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(
+                        currentX + imageSize / 2, // Center x of the circle
+                        y + imageSize / 2, // Center y of the circle
+                        imageSize / 2, // Radius
+                        0, // Start angle
+                        Math.PI * 2 // End angle
+                    );
+                    ctx.closePath();
+                    ctx.clip();
+        
+                    ctx.drawImage(img, currentX, y, imageSize, imageSize);
+                    ctx.restore();
+        
+                    currentX += imageSize + gap; // Move to the next position
                 };
             });
         }

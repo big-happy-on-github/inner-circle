@@ -195,8 +195,11 @@
         async function addPlayer(gameCode) {
             while (true) {
                 const name = prompt('enter your name:');
-                if !name alert('name is required to join the game.');
-                if name break;
+                if (name) {
+                    break;
+                } else {
+                    alert('name is required to join the game.');
+                }
             }
     
             let chosenCharacter = null;

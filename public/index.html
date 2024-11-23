@@ -244,13 +244,13 @@
 
         async function ask() {
             let code;
-            if (confirm("do you want to join a game? If not, press cancel")) {
+            if (confirm("do you want to join a game? if not (meaning you want to create a game), press cancel")) {
                 while (true) {
                     code = prompt("game code:");
                     const { data, error } = await supabase
                         .from('games')
                         .select('game_code')
-                        .eq('game_code', gameCode)
+                        .eq('game_code', code)
                         .single();
                     if (error || !data) {
                         alert("not a valid game code...");

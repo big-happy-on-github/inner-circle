@@ -113,7 +113,7 @@
     <main>
         <div id="info">
             <p>mafia</p>
-            <p id="code">game code: </p>
+            <p id="code"></p>
             <ul id="players"></ul>
         </div>
         <canvas id="canvas" style="width: 100vw; height: 100vh;" width="1920" height="1080"></canvas>
@@ -158,6 +158,8 @@
     
             // Clear the existing list
             playersList.innerHTML = '';
+
+            document.getElementById("code").textContent = `game code: ${gameCode}`;
     
             // Add each player to the UI
             players.forEach(player => {
@@ -191,20 +193,20 @@
     
         // Function to add a new player to the game
         async function addPlayer(gameCode) {
-            const name = prompt('Enter your name:');
-            if (!name) {
-                alert('Name is required to join the game.');
-                return;
+            while (true) {
+                const name = prompt('enter your name:');
+                if !name alert('name is required to join the game.');
+                if name break;
             }
     
             let chosenCharacter = null;
             while (!chosenCharacter) {
                 const choices = characters.map(c => c.name).join(', ');
-                const choice = prompt(`Choose a character: ${choices}`);
+                const choice = prompt(`choose a character: ${choices}`);
                 chosenCharacter = characters.find(c => c.name.toLowerCase() === choice.toLowerCase());
     
                 if (!chosenCharacter) {
-                    alert('Invalid choice. Please try again.');
+                    alert('not a choice man');
                 }
             }
     
@@ -218,9 +220,10 @@
     
             if (error) {
                 console.error('Error adding player:', error);
-                alert('Could not join the game. Please try again.');
+                alert("you couldn't join the game. mb mb");
+                ask();
             } else {
-                alert('You have successfully joined the game!');
+                alert('you have joined the game');
                 updatePlayersUI(gameCode);
             }
         }
@@ -235,26 +238,37 @@
                 })
                 .subscribe();
         }
+
+        async function ask() {
+            let code;
+            if (confirm("do you want to join a game? If not, press cancel")) {
+                while (true) {
+                    code = prompt("game code:");
+                    const { data, error } = await supabase
+                        .from('games')
+                        .select('game_code')
+                        .eq('game_code', gameCode)
+                        .single();
+                    if (error || !data) {
+                        alert("not a valid game code...");
+                    } else {
+                        break;
+                    }
+                }
+                addPlayer(code);
+            } else {
+                code = Math.floor(100000 + Math.random() * 900000);
+                alert(`game created! game code: ${code}`);
+                const { data, error } = await supabase
+                    .from('games')
+                    .insert([{ game_code: code }]);
+            }
+            setupRealTimeUpdates(code);
+        }
     
         // On load, ask for game code and start fetching data
         document.addEventListener('DOMContentLoaded', () => {
-            const gameCode = prompt('Enter your game code to join or create a game:');
-    
-            if (gameCode) {
-                setupRealTimeUpdates(gameCode);
-    
-                const createOrJoin = confirm('Do you want to join an existing game? Press OK for Yes, Cancel for No.');
-    
-                if (createOrJoin) {
-                    addPlayer(gameCode); // Join the game
-                } else {
-                    alert(`Game created! Share this code: ${gameCode}`);
-                }
-    
-                setInterval(() => updatePlayersUI(gameCode), 500); // Poll every 0.5 seconds for new players
-            } else {
-                alert('No game code provided. Cannot proceed.');
-            }
+            setTimeout(ask, 1250);
         });
     </script>
 </body>

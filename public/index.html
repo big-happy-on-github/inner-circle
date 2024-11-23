@@ -210,7 +210,13 @@
             const img = new Image();
             img.src = "/imgs/table.png";
             img.onload = () => {
-                ctx.drawImage(img, (canvas.width-img.width)/2, (canvas.height-img.height)/2, canvas.width/2, canvas.height/2);
+                const imgWidth = canvas.width / 2; // Scale to half the canvas width
+                const imgHeight = canvas.height / 2; // Scale to half the canvas height
+            
+                const x = (canvas.width - imgWidth) / 2; // Center horizontally
+                const y = (canvas.height - imgHeight) / 2; // Center vertically
+            
+                ctx.drawImage(img, x, y, imgWidth, imgHeight);
             };
         }
     

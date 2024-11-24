@@ -154,6 +154,7 @@
         // Function to update the UI with players
         async function updatePlayersUI(gameCode) {
             const players = await fetchPlayers(gameCode);
+            console.log(players);
             const ul = document.getElementById("players");
             
             while (ul.firstChild) {

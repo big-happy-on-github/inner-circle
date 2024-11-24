@@ -155,19 +155,27 @@
         // Function to update the UI with players
         async function updatePlayersUI(gameCode) {
             const players = await fetchPlayers(gameCode);
-    
+        
             // Clear the existing list
-            playersList.innerHTML = '<ul id="players"></ul>';
-
-            document.getElementById("code").textContent = `game code: ${gameCode}`;
-    
-            // Add each player to the UI
+            playersList.innerHTML = ''; // Clear any existing content in playersList
+        
+            // Create a new <ul> element
+            const ul = document.createElement('ul');
+            ul.id = 'players';
+        
+            // Add each player to the <ul>
             players.forEach(player => {
                 const li = document.createElement('li');
                 li.textContent = player.name;
-                playersList.appendChild(li);
+                ul.appendChild(li);
             });
-    
+        
+            // Append the <ul> to playersList
+            playersList.appendChild(ul);
+        
+            // Update the game code display
+            document.getElementById("code").textContent = `game code: ${gameCode}`;
+        
             // Re-render the players on canvas
             renderPlayersOnCanvas(players);
         }

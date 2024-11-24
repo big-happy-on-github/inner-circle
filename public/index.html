@@ -131,7 +131,6 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
     
-        const playersList = document.getElementById('players');
         const characters = [
             { name: 'Hudson', img: 'https://neweralive.na/wp-content/uploads/2024/06/lloyd-sikeba.jpg' },
             { name: 'Alex', img: 'https://example.com/alex.jpg' }, // Add more characters as needed
@@ -155,16 +154,17 @@
         // Function to update the UI with players
         async function updatePlayersUI(gameCode) {
             const players = await fetchPlayers(gameCode);
-
-            playersList.children.forEach(child => {
-                playersList.removeChild(child);
-            });
+            const ul = document.getElementById("players");
+            
+            while (ul.firstChild) {
+                ul.removeChild(ul.firstChild);
+            }
         
             // Add each player to the <ul>
             players.forEach(player => {
                 const li = document.createElement('li');
                 li.textContent = player.name;
-                playersList.appendChild(li);
+                ul.appendChild(li);
             });
         
             // Update the game code display

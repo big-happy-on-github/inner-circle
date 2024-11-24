@@ -157,7 +157,7 @@
             const players = await fetchPlayers(gameCode);
     
             // Clear the existing list
-            playersList.innerHTML = '';
+            playersList.innerHTML = '<ul></ul>';
 
             document.getElementById("code").textContent = `game code: ${gameCode}`;
     

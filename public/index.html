@@ -299,12 +299,11 @@
                     code = prompt("game code:");
                     const { data, error } = await supabase
                         .from('games')
+                        .select('*')
                         .eq('game_code', code)
                         .single();
-                    if (error || !data.game_code) {
+                    if (error || !data.game_code || data.status != "waiting") {
                         alert("not a valid game code...");
-                    } else if (data.status == "playing") {
-                        alert("sorry bro, but the game already started");
                     } else {
                         break;
                     }

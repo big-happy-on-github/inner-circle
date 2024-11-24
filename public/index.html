@@ -115,6 +115,7 @@
             <p>mafia game</p>
             <p id="code"></p>
             <ul id="players"></ul>
+            <button id="start" style="display:none" onclick="start()"></button>
         </div>
         <canvas id="canvas" style="width: 100vw; height: 100vh;" width="1920" height="1080"></canvas>
         <div id="console"></div>
@@ -135,6 +136,8 @@
             { name: 'Hudson', img: 'https://neweralive.na/wp-content/uploads/2024/06/lloyd-sikeba.jpg' },
             { name: 'Alex', img: 'https://example.com/alex.jpg' }, // Add more characters as needed
         ];
+
+        let host = false;
     
         // Function to fetch players from Supabase
         async function fetchPlayers(gameCode) {
@@ -173,6 +176,21 @@
         
             // Re-render the players on canvas
             renderPlayersOnCanvas(players);
+
+            if (host) {
+                if (players.length < 4) {
+                    document.getElementById("start").textContent = `cannot start game (+${4-players.length} players needed)`;
+                else {
+                    document.getElementById("start").textContent = `start game (${players.length}/4)`;
+                }
+                document.getElementById("start").style.display = "block"
+            }
+        }
+
+        async function start() {
+            if (!host) return;
+
+            //
         }
     
         // Function to render players on the canvas
@@ -281,11 +299,12 @@
                     code = prompt("game code:");
                     const { data, error } = await supabase
                         .from('games')
-                        .select('game_code')
                         .eq('game_code', code)
                         .single();
-                    if (error || !data) {
+                    if (error || !data.game_code) {
                         alert("not a valid game code...");
+                    } else if (data.status == "playing") {
+                        alert("sorry bro, but the game already started");
                     } else {
                         break;
                     }
@@ -296,7 +315,8 @@
                 alert(`game created! game code: ${code}`);
                 const { data, error } = await supabase
                     .from('games')
-                    .insert([{ game_code: code }]);
+                    .insert([{ game_code: code, status: "waiting" }]);
+                host = true;
                 addPlayer(code);
             }
             setupRealTimeUpdates(code);

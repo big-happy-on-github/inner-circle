@@ -300,7 +300,13 @@
             if (payload.eventType === "INSERT" && payload.new.name) {
                 const p = document.createElement("p");
                 p.textContent = `${payload.new.name} joined.`;
-                document.getElementById("console").appendChild(p);
+                
+                const consoleElement = document.getElementById("console");
+                if (consoleElement) {
+                    consoleElement.appendChild(p);
+                } else {
+                    console.error("Element with ID 'console' not found.");
+                }
             } else {
                 console.warn('Unexpected payload or event type:', payload);
             }

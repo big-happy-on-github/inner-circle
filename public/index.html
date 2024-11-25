@@ -295,21 +295,18 @@
                 .subscribe();
         }
 
-        // Function to log new player additions into the custom console
         function log(payload) {
-            // Check if the payload contains a new player (insert operation)
-            if (payload.eventType == "INSERT") {
+            console.log('Payload received:', payload); // Debug payload structure
+        
+            // Check if payload has the correct event type and structure
+            if (payload.eventType === "INSERT" && payload.new && payload.new.name) {
                 const consoleDiv = document.getElementById("console");
                 const logMessage = document.createElement("p");
-        
-                // Format the log message
                 logMessage.textContent = `${payload.new.name} joined.`;
-        
-                // Append the log message to the console
                 consoleDiv.appendChild(logMessage);
-        
-                // Scroll to the bottom of the console to show the latest message
                 consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            } else {
+                console.warn('Unexpected payload or event type:', payload);
             }
         }
 

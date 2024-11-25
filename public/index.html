@@ -297,6 +297,8 @@
 
         function log(payload) {
             console.log('Payload received:', payload); // Debug payload structure
+            console.log(payload.new);
+            console.log(payload.new.name);
         
             // Check if payload has the correct event type and structure
             if (payload.eventType === "INSERT" && payload.new && payload.new.name) {

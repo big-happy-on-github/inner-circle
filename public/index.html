@@ -302,6 +302,7 @@
         
             // Check if payload has the correct event type and structure
             if (payload.eventType === "INSERT" && payload.new && payload.new.name) {
+                console.log("here");
                 const consoleDiv = document.getElementById("console");
                 const logMessage = document.createElement("p");
                 logMessage.textContent = `${payload.new.name} joined.`;

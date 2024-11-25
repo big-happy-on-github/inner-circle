@@ -298,13 +298,12 @@
         // Function to log new player additions into the custom console
         function log(payload) {
             // Check if the payload contains a new player (insert operation)
-            if (payload.eventType === "INSERT" && payload.new) {
+            if (payload.eventType == "INSERT") {
                 const consoleDiv = document.getElementById("console");
                 const logMessage = document.createElement("p");
         
                 // Format the log message
                 logMessage.textContent = `${payload.new.name} joined.`;
-                logMessage.style.margin = "5px 0"; // Add some spacing between log entries
         
                 // Append the log message to the console
                 consoleDiv.appendChild(logMessage);

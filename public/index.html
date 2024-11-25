@@ -114,7 +114,6 @@
         <div id="info">
             <p>mafia game</p>
             <p id="code"></p>
-            <ul id="players"></ul>
             <button id="start" style="display:none"></button>
         </div>
         <canvas id="canvas" style="width: 100vw; height: 100vh;" width="1920" height="1080"></canvas>
@@ -157,19 +156,6 @@
         // Function to update the UI with players
         async function updatePlayersUI(gameCode) {
             const players = await fetchPlayers(gameCode);
-            console.log(players);
-            const ul = document.getElementById("players");
-            
-            while (ul.firstChild) {
-                ul.removeChild(ul.firstChild);
-            }
-        
-            // Add each player to the <ul>
-            players.forEach(player => {
-                const li = document.createElement('li');
-                li.textContent = player.name;
-                ul.appendChild(li);
-            });
         
             // Update the game code display
             document.getElementById("code").textContent = `game code: ${gameCode}`;
@@ -257,7 +243,11 @@
             while (true) {
                 name = prompt('enter your name:');
                 if (name) {
-                    break;
+                    if (name.length > 12) {
+                        alert("name must be less than 12 characters");
+                    } else {
+                        break;
+                    }
                 } else {
                     alert('name is required to join the game.');
                 }

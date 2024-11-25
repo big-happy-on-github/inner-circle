@@ -296,18 +296,11 @@
         }
 
         function log(payload) {
-            console.log('Payload received:', payload); // Debug payload structure
-            console.log(payload.new);
-            console.log(payload.new.name);
-        
             // Check if payload has the correct event type and structure
-            if (payload.eventType === "INSERT" && payload.new && payload.new.name) {
-                console.log("here");
-                const consoleDiv = document.getElementById("console");
-                const logMessage = document.createElement("p");
-                logMessage.textContent = `${payload.new.name} joined.`;
-                consoleDiv.appendChild(logMessage);
-                consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            if (payload.eventType === "INSERT" && payload.new.name) {
+                const p = document.createElement("p");
+                p.textContent = `${payload.new.name} joined.`;
+                document.getElementById("console").appendChild(p);
             } else {
                 console.warn('Unexpected payload or event type:', payload);
             }

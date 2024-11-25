@@ -225,6 +225,15 @@
         
                     ctx.drawImage(img, currentX, y, imageSize, imageSize);
                     ctx.restore();
+
+                    // Set text properties
+                    ctx.font = '30px Arial'; // Set font size and family
+                    ctx.fillStyle = 'yellow';  // Set fill color
+                    ctx.textAlign = 'center'; // Center align text
+                    ctx.textBaseline = 'middle'; // Vertical alignment to the middle
+            
+                    // Draw text
+                    ctx.fillText(player.name, currentX, y + gap);
         
                     currentX += imageSize + gap; // Move to the next position
                 };
@@ -244,8 +253,9 @@
     
         // Function to add a new player to the game
         async function addPlayer(gameCode) {
+            let name;
             while (true) {
-                const name = prompt('enter your name:');
+                name = prompt('enter your name:');
                 if (name) {
                     break;
                 } else {

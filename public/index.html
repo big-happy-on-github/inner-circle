@@ -206,7 +206,7 @@
                 return array;
             }
             const list = shuffle(players);
-            const { data, error } = await supabase
+            const { data2, error2 } = await supabase
                 .from('games')
                 .update({ roles: { mafia: [list[0]], angel: [list[1]] } }) // Fields to update
                 .eq('game_code', gameCode); // Condition to find the row(s) to update

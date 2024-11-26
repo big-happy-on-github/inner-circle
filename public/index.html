@@ -147,6 +147,8 @@
         ];
 
         let host = false;
+        let id;
+        let role;
     
         // Function to fetch players from Supabase
         async function fetchPlayers(gameCode) {
@@ -178,17 +180,38 @@
                     document.getElementById("start").textContent = `cannot start game (+${4-players.length} players needed)`;
                 } else {
                     document.getElementById("start").textContent = `start game (${players.length}/4)`;
-                    document.getElementById("start").onclick = "start()";
+                    document.getElementById("start").onclick = `start(${gameCode})`;
                 }
                 document.getElementById("start").style.display = "block"
             }
         }
 
-        async function start() {
+        async function start(gameCode) {
             if (!host) return;
 
-            //
+            const { data, error } = await supabase
+                .from('games')
+                .update({ status: "playing" }) // Fields to update
+                .eq('game_code', gameCode); // Condition to find the row(s) to update
+
+            const players = await fetchPlayers(gameCode);
+            
+            function shuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    // Pick a random index from 0 to i
+                    const randomIndex = Math.floor(Math.random() * (i + 1));
+                    // Swap elements at index i and the random index
+                    [array[i], array[randomIndex]] = [array[randomIndex], array[i]];
+                }
+                return array;
+            }
+            const list = shuffle(players);
+            const { data, error } = await supabase
+                .from('games')
+                .update({ roles: { mafia: [list[0]], angel: [list[1]] } }) // Fields to update
+                .eq('game_code', gameCode); // Condition to find the row(s) to update
         }
+        window.start = start;
     
         // Function to render players on the canvas
         function renderPlayersOnCanvas(players) {
@@ -262,7 +285,6 @@
                     alert('name is required to join the game.');
                 }
             }
-            console.log(name);
     
             let chosenCharacter = null;
             while (!chosenCharacter) {
@@ -298,7 +320,14 @@
             supabase
                 .channel('realtime:players')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `game_code=eq.${gameCode}` }, payload => {
-                    console.log('Change detected:', payload);
+                    log(payload);
+                    updatePlayersUI(gameCode); // Update UI whenever there's a change
+                })
+                .subscribe();
+
+            supabase
+                .channel('realtime:games')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `game_code=eq.${gameCode}` }, payload => {
                     log(payload);
                     updatePlayersUI(gameCode); // Update UI whenever there's a change
                 })
@@ -306,20 +335,29 @@
         }
 
         function log(payload) {
-            // Check if payload has the correct event type and structure
-            if (payload.eventType === "INSERT" && payload.new.name) {
-                const p = document.createElement("p");
-                p.textContent = `${payload.new.name} joined.`;
-                
-                const consoleElement = document.getElementById("console");
-                if (consoleElement) {
-                    consoleElement.appendChild(p);
-                } else {
-                    console.error("Element with ID 'console' not found.");
+            const p = document.createElement("p");
+            if (payload.table == "players") {
+                if (payload.eventType === "INSERT" && payload.new.name) {
+                    p.textContent = `${payload.new.name} joined.`;
                 }
-            } else {
-                console.warn('Unexpected payload or event type:', payload);
+            } else if (payload.table == "games") {
+                if (payload.eventType === "UPDATE" && payload.new.status == "playing") {
+                    p.textContent = "game starting...";
+                } else if (payload.eventType === "UPDATE" && payload.new.roles) {
+                    p.textContent = "roles have been assigned...";
+                    if (payload.new.roles.mafia[0] == id) {
+                        role = "mafia";
+                        alert("you're the mafia!");
+                    } else if (payload.new.roles.angel[0] == id) {
+                        role = "angel";
+                        alert("you're the angel!");
+                    } else {
+                        role = "person";
+                        alert("you're a person");
+                    }
+                }
             }
+            document.getElementById("console").appendChild(p);
         }
 
         async function ask() {
@@ -344,7 +382,9 @@
                 alert(`game created! game code: ${code}`);
                 const { data, error } = await supabase
                     .from('games')
-                    .insert([{ game_code: code, status: "waiting" }]);
+                    .insert([{ game_code: code, status: "waiting", roles: {} }])
+                    .select();
+                id = data[0].id;
                 host = true;
                 addPlayer(code);
             }

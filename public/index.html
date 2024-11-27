@@ -335,6 +335,7 @@
         }
 
         function log(payload) {
+            console.log(payload);
             const p = document.createElement("p");
             if (payload.table == "players") {
                 if (payload.eventType === "INSERT" && payload.new.name) {

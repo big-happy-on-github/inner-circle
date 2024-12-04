@@ -141,377 +141,258 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
     
-        const characters = [
-            { name: 'Hudson', img: 'https://neweralive.na/wp-content/uploads/2024/06/lloyd-sikeba.jpg' },
-            { name: 'Alex', img: 'https://example.com/alex.jpg' }, // Add more characters as needed
-        ];
-
         let host = false;
         let id;
         let role;
-    
+        
+        const characters = [
+            { name: 'Hudson', img: 'https://example.com/hudson.jpg' },
+            { name: 'Alex', img: 'https://example.com/alex.jpg' },
+            { name: 'Taylor', img: 'https://example.com/taylor.jpg' },
+        ];
+        
         // Function to fetch players from Supabase
         async function fetchPlayers(gameCode) {
             const { data, error } = await supabase
                 .from('players')
                 .select('*')
                 .eq('game_code', gameCode);
-    
+        
             if (error) {
                 console.error('Error fetching players:', error);
                 return [];
             }
-    
+        
             return data;
         }
-    
-        // Function to update the UI with players
-        async function updatePlayersUI(gameCode) {
-            const players = await fetchPlayers(gameCode);
         
-            // Update the game code display
-            document.getElementById("code").textContent = `game code: ${gameCode}`;
-        
-            // Re-render the players on canvas
-            renderPlayersOnCanvas(players);
-
-            if (host) {
-                if (players.length < 4) {
-                    document.getElementById("start").textContent = `cannot start game (+${4-players.length} players needed)`;
-                } else {
-                    document.getElementById("start").textContent = `start game (${players.length}/4)`;
-                    document.getElementById("start").onclick = () => start(gameCode); // Assign a function directly
-                }
-                document.getElementById("start").style.display = "block"
-            }
-        }
-
-        async function start(gameCode) {
-            if (!host) return;
-
-            const { data, error } = await supabase
-                .from('games')
-                .update({ status: "playing" }) // Fields to update
-                .eq('game_code', gameCode); // Condition to find the row(s) to update
-
-            const players = await fetchPlayers(gameCode);
-            
-            function shuffle(array) {
-                for (let i = array.length - 1; i > 0; i--) {
-                    // Pick a random index from 0 to i
-                    const randomIndex = Math.floor(Math.random() * (i + 1));
-                    // Swap elements at index i and the random index
-                    [array[i], array[randomIndex]] = [array[randomIndex], array[i]];
-                }
-                return array;
-            }
-            const list = shuffle(players);
-            const { data2, error2 } = await supabase
-                .from('games')
-                .update({ roles: { mafia: [list[0]], angel: [list[1]] } }) // Fields to update
-                .eq('game_code', gameCode); // Condition to find the row(s) to update
-        }
-        window.start = start;
-    
-        // Function to render players on the canvas
-        async function renderPlayersOnCanvas(players) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
-        
-            const imageSize = 300; // Set image size to 300x300
-            const gap = 20; // Gap between images
-            const totalImageWidth = players.length * imageSize + (players.length - 1) * gap;
-            const startX = (canvas.width - totalImageWidth) / 2; // Center the images
-            const y = (canvas.height - imageSize) / 2 - 200; // Center vertically
-        
-            let currentX = startX;
-        
-            // Draw all player icons first
-            await Promise.all(players.map(player => {
-                return new Promise(resolve => {
-                    const img = new Image();
-                    img.src = player.image;
-                    img.onload = () => {
-                        // Draw circular image
-                        ctx.save();
-                        ctx.beginPath();
-                        ctx.arc(
-                            currentX + imageSize / 2, // Center x of the circle
-                            y + imageSize / 2, // Center y of the circle
-                            imageSize / 2, // Radius
-                            0, // Start angle
-                            Math.PI * 2 // End angle
-                        );
-                        ctx.closePath();
-                        ctx.clip();
-        
-                        ctx.drawImage(img, currentX, y, imageSize, imageSize);
-                        ctx.restore();
-        
-                        // Set text properties
-                        ctx.font = '30px Arial'; // Set font size and family
-                        ctx.fillStyle = 'yellow';  // Set fill color
-                        ctx.textAlign = 'center'; // Center align text
-                        ctx.textBaseline = 'middle'; // Vertical alignment to the middle
-        
-                        // Draw text
-                        ctx.fillText(player.name, currentX + gap, y + gap);
-        
-                        currentX += imageSize + gap; // Move to the next position
-                        resolve();
-                    };
-                });
-            }));
-        
-            // Draw the table image last, on top of player icons
-            const img = new Image();
-            img.src = "/imgs/table.png";
-            img.onload = () => {
-                const imgWidth = canvas.width / 2; // Scale to half the canvas width
-                const imgHeight = canvas.height / 2; // Scale to half the canvas height
-        
-                const x = (canvas.width - imgWidth) / 2; // Center horizontally
-                const y = (canvas.height - imgHeight) / 2 + 50; // Center vertically
-        
-                ctx.drawImage(img, x, y, imgWidth, imgHeight);
-            };
-        }
-    
-        // Function to add a new player to the game
+        // Function to add a new player to the game, with character selection
         async function addPlayer(gameCode) {
             let name;
             while (true) {
-                name = prompt('enter your name:');
+                name = prompt('Enter your name:');
                 if (name) {
                     if (name.length > 12) {
-                        alert("name must be less than 12 characters");
+                        alert("Name must be less than 12 characters.");
                     } else {
                         break;
                     }
                 } else {
-                    alert('name is required to join the game.');
+                    alert('Name is required to join the game.');
                 }
             }
-    
+        
             let chosenCharacter = null;
             while (!chosenCharacter) {
                 const choices = characters.map(c => c.name).join(', ');
-                const choice = prompt(`choose a character: ${choices}`);
+                const choice = prompt(`Choose a character: ${choices}`);
                 chosenCharacter = characters.find(c => c.name.toLowerCase() === choice.toLowerCase());
-    
+        
                 if (!chosenCharacter) {
-                    alert('not a choice man');
+                    alert('Invalid choice. Please choose a valid character.');
                 }
             }
-    
+        
             const newPlayer = {
-                name: name,
-                image: chosenCharacter.img,
+                name,
                 game_code: gameCode,
+                character: chosenCharacter.name,
+                image: chosenCharacter.img,
+                status: 'alive',
             };
-    
+        
             const { error } = await supabase.from('players').insert([newPlayer]);
-    
+        
             if (error) {
                 console.error('Error adding player:', error);
-                alert("you couldn't join the game. mb mb");
+                alert("You couldn't join the game. Try again.");
                 ask();
             } else {
-                alert('you have joined the game');
+                alert('You have joined the game!');
                 updatePlayersUI(gameCode);
             }
         }
-    
-        function setupRealTimeUpdates(gameCode) {
-            // Players table updates
-            supabase
-                .channel('realtime:players')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `game_code=eq.${gameCode}` }, payload => {
-                    log(payload);
-                    updatePlayersUI(gameCode); // Update UI whenever there's a change
-                })
-                .subscribe();
         
-            // Games table updates
-            supabase
-                .channel('realtime:games')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `game_code=eq.${gameCode}` }, payload => {
-                    log(payload);
-                    updatePlayersUI(gameCode); // Update UI whenever there's a change
-                })
-                .subscribe();
+        // Function to update the UI with players
+        async function updatePlayersUI(gameCode) {
+            const players = await fetchPlayers(gameCode);
         
-            // Actions table updates
-            supabase
-                .channel('realtime:actions')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'actions', filter: `game_code=eq.${gameCode}` }, payload => {
-                    handleAction(payload.new);
-                })
-                .subscribe();
-        }
-        
-        function handleAction(action) {
-            const consoleDiv = document.getElementById("console");
-            if (action.action === "vote") {
-                consoleDiv.innerHTML += `<p>Player ${action.player_id} voted for Player ${action.recipient}</p>`;
-            } else if (action.action === "kill") {
-                consoleDiv.innerHTML += `<p>Player ${action.player_id} attempted to kill Player ${action.recipient}</p>`;
-                processKill(action.recipient);
-            }
-        
-            // Scroll the console to show the latest log
-            consoleDiv.scrollTop = consoleDiv.scrollHeight;
-        }
-        
-        function processKill(recipientId) {
-            // Logic to process the kill action
-            const consoleDiv = document.getElementById("console");
-            // Example: Remove the recipient from the game (implement your own game rules here)
-            consoleDiv.innerHTML += `<p>Player ${recipientId} has been eliminated!</p>`;
-        
-            // Optionally: Update the canvas to reflect player elimination
-            // Implement logic to update `gameState` and re-render the canvas
-            renderGameStart(gameState); // Ensure this reflects the current game state
-        }
-
-        function log(payload) {
-            console.log(payload);
-            const p = document.createElement("p");
-            
-            if (payload.table === "players") {
-                if (payload.eventType === "INSERT" && payload.new.name) {
-                    p.textContent = `${payload.new.name} joined.`;
+            if (host) {
+                const startButton = document.getElementById('start');
+                if (players.length < 4) {
+                    startButton.textContent = `Cannot start game (+${4 - players.length} players needed)`;
+                } else {
+                    startButton.textContent = `Start game (${players.length}/4)`;
+                    startButton.onclick = () => start(gameCode);
                 }
-            } else if (payload.table === "games") {
-                if (payload.eventType === "UPDATE") {
-                    if (payload.new.status === "playing") {
-                        if (!document.getElementById("console").innerHTML.includes("game starting...")) {
-                            p.textContent = "game starting...";
-                            document.getElementById("console").appendChild(p);
-                            // Trigger the gameplay logic
-                            startGame(payload.new.roles);
-                        }
-                    } else if (payload.new.roles) {
-                        if (!document.getElementById("console").innerHTML.includes("roles have been assigned...")) {
-                            p.textContent = "roles have been assigned...";
-                            document.getElementById("console").appendChild(p);
-                            assignRoles(payload.new.roles);
-                        }
-                    }
-                }
-            }
-            document.getElementById("console").appendChild(p);
-        }
-
-        function assignRoles(roles) {
-            if (roles.mafia[0] === id) {
-                role = "mafia";
-                alert("You're the Mafia!");
-            } else if (roles.angel[0] === id) {
-                role = "angel";
-                alert("You're the Angel!");
-            } else {
-                role = "person";
-                alert("You're a person.");
+                startButton.style.display = 'block';
             }
         }
         
-        function startGame(roles) {
-            console.log("Starting the game...");
+        // Function to add a game log to the database
+        async function addGameLog(gameId, message) {
+            const { error } = await supabase.from('game_logs').insert([
+                {
+                    game_id: gameId,
+                    log_message: message,
+                },
+            ]);
         
-            // Clear the console and provide a starting message
-            const consoleDiv = document.getElementById("console");
-            consoleDiv.innerHTML = "<p>The game has started!</p>";
+            if (error) {
+                console.error('Error adding game log:', error);
+            }
+        }
         
-            // Display roles in the console for debugging (remove for production)
-            consoleDiv.innerHTML += `<p>Roles assigned: Mafia - ${roles.mafia[0].name}, Angel - ${roles.angel[0].name}</p>`;
+        // Function to fetch and display game logs
+        async function fetchGameLogs(gameId) {
+            const { data, error } = await supabase
+                .from('game_logs')
+                .select('*')
+                .eq('game_id', gameId)
+                .order('created_at', { ascending: true });
         
-            // Set up the game state
-            const gameState = {
-                players: roles.mafia.concat(roles.angel).concat(
-                    roles.person ? roles.person : [] // Add other players if present
-                ),
+            if (error) {
+                console.error('Error fetching game logs:', error);
+                return;
+            }
+        
+            const consoleDiv = document.getElementById('console');
+            consoleDiv.innerHTML = ""; // Clear existing logs
+            data.forEach((log) => {
+                consoleDiv.innerHTML += `<p>${log.log_message}</p>`;
+            });
+        }
+        
+        // Function to start the game
+        async function start(gameCode) {
+            if (!host) return;
+        
+            const players = await fetchPlayers(gameCode);
+        
+            // Assign roles
+            function assignRoles(players) {
+                const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
+                return {
+                    mafia: shuffledPlayers[0],
+                    angel: shuffledPlayers[1],
+                    townsfolk: shuffledPlayers.slice(2),
+                };
+            }
+        
+            const roles = assignRoles(players);
+        
+            // Save roles in the database
+            const { error } = await supabase
+                .from('games')
+                .update({ roles, status: 'playing' })
+                .eq('game_code', gameCode);
+        
+            if (error) {
+                console.error('Error starting game:', error);
+                alert('Error starting the game. Try again.');
+                return;
+            }
+        
+            addGameLog(gameCode, 'The game has started!');
+            startGame(roles, gameCode); // Start the gameplay
+        }
+        
+        // Start the game loop
+        function startGame(roles, gameCode) {
+            let gameState = {
+                players: [...roles.mafia, ...roles.angel, ...roles.townsfolk],
                 mafia: roles.mafia,
                 angel: roles.angel,
+                townsfolk: roles.townsfolk,
+                phase: 'night', // Start with the night phase
+                eliminated: [],
                 gameOver: false,
             };
         
-            // Display the initial game state on the canvas
-            renderGameStart(gameState);
-        
-            // Run the game loop
-            gameLoop(gameState);
+            fetchGameLogs(gameCode); // Load and display existing logs
+            runGameLoop(gameState, gameCode);
         }
         
-        function renderGameStart(gameState) {
-            const ctx = document.getElementById("canvas").getContext("2d");
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
-        
-            const mafia = gameState.mafia[0].name;
-            const angel = gameState.angel[0].name;
-        
-            ctx.font = "36px Arial";
-            ctx.fillStyle = "white";
-            ctx.textAlign = "center";
-        
-            // Display the game start message
-            ctx.fillText("The Game Has Started!", canvas.width / 2, canvas.height / 4);
-            ctx.fillText(`Mafia: ${mafia}`, canvas.width / 2, canvas.height / 4 + 50);
-            ctx.fillText(`Angel: ${angel}`, canvas.width / 2, canvas.height / 4 + 100);
-        }
-        
-        function gameLoop(gameState) {
-            // Example placeholder for game mechanics
-            const consoleDiv = document.getElementById("console");
+        // Run the game loop
+        function runGameLoop(gameState, gameCode) {
+            const consoleDiv = document.getElementById('console');
         
             const interval = setInterval(() => {
                 if (gameState.gameOver) {
                     clearInterval(interval);
-                    endGame(gameState);
+                    endGame(gameState, gameCode);
                     return;
                 }
         
-                // Example: Rotate turns, update player status, etc.
-                const randomEvent = Math.random();
-                if (randomEvent < 0.5) {
-                    consoleDiv.innerHTML += "<p>The Mafia made a move...</p>";
-                } else {
-                    consoleDiv.innerHTML += "<p>The Angel protected someone...</p>";
+                if (gameState.phase === 'night') {
+                    handleNightPhase(gameState, gameCode);
+                } else if (gameState.phase === 'day') {
+                    handleDayPhase(gameState, gameCode);
                 }
         
-                // Scroll console to show the latest log
                 consoleDiv.scrollTop = consoleDiv.scrollHeight;
-            }, 3000); // Example game loop interval: 3 seconds
+            }, 5000);
         }
         
-        function endGame(gameState) {
-            const ctx = document.getElementById("canvas").getContext("2d");
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+        // Handle the night phase
+        function handleNightPhase(gameState, gameCode) {
+            const mafiaChoice = prompt('Mafia, choose a player to eliminate:');
+            const angelChoice = prompt('Angel, choose a player to protect:');
         
-            const winner = gameState.mafia.length === 0 ? "The Townspeople" : "The Mafia";
-            ctx.font = "36px Arial";
-            ctx.fillStyle = "white";
-            ctx.textAlign = "center";
+            const eliminated = mafiaChoice === angelChoice ? null : mafiaChoice;
         
-            // Display the winner on the canvas
-            ctx.fillText(`Game Over! ${winner} Win!`, canvas.width / 2, canvas.height / 2);
+            if (eliminated) {
+                gameState.eliminated.push(eliminated);
+                gameState.players = gameState.players.filter((p) => p.name !== eliminated);
+                addGameLog(gameCode, `Player ${eliminated} was eliminated during the night.`);
+            } else {
+                addGameLog(gameCode, `Angel protected their target. No one was eliminated.`);
+            }
         
-            // Log game over to the console
-            const consoleDiv = document.getElementById("console");
-            consoleDiv.innerHTML += `<p>Game Over! ${winner} Win!</p>`;
+            gameState.phase = 'day';
         }
-
+        
+        // Handle the day phase
+        function handleDayPhase(gameState, gameCode) {
+            const vote = prompt('Townsfolk, vote to eliminate a player:');
+            gameState.eliminated.push(vote);
+            gameState.players = gameState.players.filter((p) => p.name !== vote);
+            addGameLog(gameCode, `Player ${vote} was eliminated by vote during the day.`);
+        
+            checkGameOver(gameState, gameCode);
+            gameState.phase = 'night';
+        }
+        
+        // Check for game-over conditions
+        function checkGameOver(gameState, gameCode) {
+            const mafiaAlive = gameState.players.find((p) => p.role === 'mafia');
+            const townsfolkAlive = gameState.players.filter((p) => p.role === 'townsfolk');
+        
+            if (!mafiaAlive || townsfolkAlive.length === 0) {
+                gameState.gameOver = true;
+            }
+        }
+        
+        // End the game
+        function endGame(gameState, gameCode) {
+            const winner = gameState.players.some((p) => p.role === 'mafia') ? 'Mafia' : 'Townsfolk';
+            addGameLog(gameCode, `Game Over! ${winner} win!`);
+            alert(`Game Over! ${winner} win!`);
+        }
+        
+        // Ask to join or create a game
         async function ask() {
             let code;
-            if (confirm("do you want to join a game? if not (meaning you want to create a game), press cancel")) {
+            if (confirm("Do you want to join a game? Press 'Cancel' to create a new game.")) {
                 while (true) {
-                    code = prompt("game code:");
+                    code = prompt("Game code:");
                     const { data, error } = await supabase
                         .from('games')
                         .select('*')
                         .eq('game_code', code)
                         .single();
-                    if (error || !data.game_code || data.status != "waiting") {
-                        alert("not a valid game code...");
+                    if (error || !data.game_code || data.status !== "waiting") {
+                        alert("Invalid game code. Try again.");
                     } else {
                         break;
                     }
@@ -519,7 +400,7 @@
                 addPlayer(code);
             } else {
                 code = Math.floor(100000 + Math.random() * 900000);
-                alert(`game created! game code: ${code}`);
+                alert(`Game created! Game code: ${code}`);
                 const { data, error } = await supabase
                     .from('games')
                     .insert([{ game_code: code, status: "waiting", roles: {} }])
@@ -530,8 +411,25 @@
             }
             setupRealTimeUpdates(code);
         }
-    
-        // On load, ask for game code and start fetching data
+        
+        // Set up real-time updates
+        function setupRealTimeUpdates(gameCode) {
+            supabase
+                .channel('realtime:players')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `game_code=eq.${gameCode}` }, payload => {
+                    updatePlayersUI(gameCode);
+                })
+                .subscribe();
+        
+            supabase
+                .channel('realtime:games')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `game_code=eq.${gameCode}` }, payload => {
+                    updatePlayersUI(gameCode);
+                })
+                .subscribe();
+        }
+        
+        // Initialize the game
         document.addEventListener('DOMContentLoaded', () => {
             setTimeout(ask, 1250);
         });

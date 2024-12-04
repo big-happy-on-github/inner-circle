@@ -214,7 +214,7 @@
         window.start = start;
     
         // Function to render players on the canvas
-        function renderPlayersOnCanvas(players) {
+        async function renderPlayersOnCanvas(players) {
             ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
         
             const imageSize = 300; // Set image size to 300x300
@@ -225,47 +225,53 @@
         
             let currentX = startX;
         
-            players.forEach(player => {
-                const img = new Image();
-                img.src = player.image;
-                img.onload = () => {
-                    // Draw circular image
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.arc(
-                        currentX + imageSize / 2, // Center x of the circle
-                        y + imageSize / 2, // Center y of the circle
-                        imageSize / 2, // Radius
-                        0, // Start angle
-                        Math.PI * 2 // End angle
-                    );
-                    ctx.closePath();
-                    ctx.clip();
+            // Draw all player icons first
+            await Promise.all(players.map(player => {
+                return new Promise(resolve => {
+                    const img = new Image();
+                    img.src = player.image;
+                    img.onload = () => {
+                        // Draw circular image
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.arc(
+                            currentX + imageSize / 2, // Center x of the circle
+                            y + imageSize / 2, // Center y of the circle
+                            imageSize / 2, // Radius
+                            0, // Start angle
+                            Math.PI * 2 // End angle
+                        );
+                        ctx.closePath();
+                        ctx.clip();
         
-                    ctx.drawImage(img, currentX, y, imageSize, imageSize);
-                    ctx.restore();
-
-                    // Set text properties
-                    ctx.font = '30px Arial'; // Set font size and family
-                    ctx.fillStyle = 'yellow';  // Set fill color
-                    ctx.textAlign = 'center'; // Center align text
-                    ctx.textBaseline = 'middle'; // Vertical alignment to the middle
-            
-                    // Draw text
-                    ctx.fillText(player.name, currentX + gap, y + gap);
+                        ctx.drawImage(img, currentX, y, imageSize, imageSize);
+                        ctx.restore();
         
-                    currentX += imageSize + gap; // Move to the next position
-                };
-            });
+                        // Set text properties
+                        ctx.font = '30px Arial'; // Set font size and family
+                        ctx.fillStyle = 'yellow';  // Set fill color
+                        ctx.textAlign = 'center'; // Center align text
+                        ctx.textBaseline = 'middle'; // Vertical alignment to the middle
+        
+                        // Draw text
+                        ctx.fillText(player.name, currentX + gap, y + gap);
+        
+                        currentX += imageSize + gap; // Move to the next position
+                        resolve();
+                    };
+                });
+            }));
+        
+            // Draw the table image last, on top of player icons
             const img = new Image();
             img.src = "/imgs/table.png";
             img.onload = () => {
                 const imgWidth = canvas.width / 2; // Scale to half the canvas width
                 const imgHeight = canvas.height / 2; // Scale to half the canvas height
-            
+        
                 const x = (canvas.width - imgWidth) / 2; // Center horizontally
                 const y = (canvas.height - imgHeight) / 2 + 50; // Center vertically
-            
+        
                 ctx.drawImage(img, x, y, imgWidth, imgHeight);
             };
         }

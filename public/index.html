@@ -193,6 +193,23 @@
                 .from('games')
                 .update({ status: "playing" }) // Fields to update
                 .eq('game_code', gameCode); // Condition to find the row(s) to update
+
+            const players = await fetchPlayers(gameCode);
+            
+            function shuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    // Pick a random index from 0 to i
+                    const randomIndex = Math.floor(Math.random() * (i + 1));
+                    // Swap elements at index i and the random index
+                    [array[i], array[randomIndex]] = [array[randomIndex], array[i]];
+                }
+                return array;
+            }
+            const list = shuffle(players);
+            const { data2, error2 } = await supabase
+                .from('games')
+                .update({ roles: { mafia: [list[0]], angel: [list[1]] } }) // Fields to update
+                .eq('game_code', gameCode); // Condition to find the row(s) to update
         }
         window.start = start;
     

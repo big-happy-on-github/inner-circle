@@ -304,8 +304,8 @@
             }
         }
     
-        // Set up real-time listener for players table
         function setupRealTimeUpdates(gameCode) {
+            // Players table updates
             supabase
                 .channel('realtime:players')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `game_code=eq.${gameCode}` }, payload => {
@@ -313,7 +313,8 @@
                     updatePlayersUI(gameCode); // Update UI whenever there's a change
                 })
                 .subscribe();
-
+        
+            // Games table updates
             supabase
                 .channel('realtime:games')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `game_code=eq.${gameCode}` }, payload => {
@@ -321,6 +322,38 @@
                     updatePlayersUI(gameCode); // Update UI whenever there's a change
                 })
                 .subscribe();
+        
+            // Actions table updates
+            supabase
+                .channel('realtime:actions')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'actions', filter: `game_code=eq.${gameCode}` }, payload => {
+                    handleAction(payload.new);
+                })
+                .subscribe();
+        }
+        
+        function handleAction(action) {
+            const consoleDiv = document.getElementById("console");
+            if (action.action === "vote") {
+                consoleDiv.innerHTML += `<p>Player ${action.player_id} voted for Player ${action.recipient}</p>`;
+            } else if (action.action === "kill") {
+                consoleDiv.innerHTML += `<p>Player ${action.player_id} attempted to kill Player ${action.recipient}</p>`;
+                processKill(action.recipient);
+            }
+        
+            // Scroll the console to show the latest log
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+        
+        function processKill(recipientId) {
+            // Logic to process the kill action
+            const consoleDiv = document.getElementById("console");
+            // Example: Remove the recipient from the game (implement your own game rules here)
+            consoleDiv.innerHTML += `<p>Player ${recipientId} has been eliminated!</p>`;
+        
+            // Optionally: Update the canvas to reflect player elimination
+            // Implement logic to update `gameState` and re-render the canvas
+            renderGameStart(gameState); // Ensure this reflects the current game state
         }
 
         function log(payload) {

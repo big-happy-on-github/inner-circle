@@ -193,23 +193,6 @@
                 .from('games')
                 .update({ status: "playing" }) // Fields to update
                 .eq('game_code', gameCode); // Condition to find the row(s) to update
-
-            const players = await fetchPlayers(gameCode);
-            
-            function shuffle(array) {
-                for (let i = array.length - 1; i > 0; i--) {
-                    // Pick a random index from 0 to i
-                    const randomIndex = Math.floor(Math.random() * (i + 1));
-                    // Swap elements at index i and the random index
-                    [array[i], array[randomIndex]] = [array[randomIndex], array[i]];
-                }
-                return array;
-            }
-            const list = shuffle(players);
-            const { data2, error2 } = await supabase
-                .from('games')
-                .update({ roles: { mafia: [list[0]], angel: [list[1]] } }) // Fields to update
-                .eq('game_code', gameCode); // Condition to find the row(s) to update
         }
         window.start = start;
     
@@ -343,28 +326,128 @@
         function log(payload) {
             console.log(payload);
             const p = document.createElement("p");
-            if (payload.table == "players") {
+            
+            if (payload.table === "players") {
                 if (payload.eventType === "INSERT" && payload.new.name) {
                     p.textContent = `${payload.new.name} joined.`;
                 }
-            } else if (payload.table == "games") {
-                if (payload.eventType === "UPDATE" && payload.new.status == "playing") {
-                    p.textContent = "game starting...";
-                } else if (payload.eventType === "UPDATE" && payload.new.roles) {
-                    p.textContent = "roles have been assigned...";
-                    if (payload.new.roles.mafia[0] == id) {
-                        role = "mafia";
-                        alert("you're the mafia!");
-                    } else if (payload.new.roles.angel[0] == id) {
-                        role = "angel";
-                        alert("you're the angel!");
-                    } else {
-                        role = "person";
-                        alert("you're a person");
+            } else if (payload.table === "games") {
+                if (payload.eventType === "UPDATE") {
+                    if (payload.new.status === "playing") {
+                        if (!document.getElementById("console").innerHTML.includes("game starting...")) {
+                            p.textContent = "game starting...";
+                            document.getElementById("console").appendChild(p);
+                            // Trigger the gameplay logic
+                            startGame(payload.new.roles);
+                        }
+                    } else if (payload.new.roles) {
+                        if (!document.getElementById("console").innerHTML.includes("roles have been assigned...")) {
+                            p.textContent = "roles have been assigned...";
+                            document.getElementById("console").appendChild(p);
+                            assignRoles(payload.new.roles);
+                        }
                     }
                 }
             }
             document.getElementById("console").appendChild(p);
+        }
+
+        function assignRoles(roles) {
+            if (roles.mafia[0] === id) {
+                role = "mafia";
+                alert("You're the Mafia!");
+            } else if (roles.angel[0] === id) {
+                role = "angel";
+                alert("You're the Angel!");
+            } else {
+                role = "person";
+                alert("You're a person.");
+            }
+        }
+        
+        function startGame(roles) {
+            console.log("Starting the game...");
+        
+            // Clear the console and provide a starting message
+            const consoleDiv = document.getElementById("console");
+            consoleDiv.innerHTML = "<p>The game has started!</p>";
+        
+            // Display roles in the console for debugging (remove for production)
+            consoleDiv.innerHTML += `<p>Roles assigned: Mafia - ${roles.mafia[0].name}, Angel - ${roles.angel[0].name}</p>`;
+        
+            // Set up the game state
+            const gameState = {
+                players: roles.mafia.concat(roles.angel).concat(
+                    roles.person ? roles.person : [] // Add other players if present
+                ),
+                mafia: roles.mafia,
+                angel: roles.angel,
+                gameOver: false,
+            };
+        
+            // Display the initial game state on the canvas
+            renderGameStart(gameState);
+        
+            // Run the game loop
+            gameLoop(gameState);
+        }
+        
+        function renderGameStart(gameState) {
+            const ctx = document.getElementById("canvas").getContext("2d");
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+        
+            const mafia = gameState.mafia[0].name;
+            const angel = gameState.angel[0].name;
+        
+            ctx.font = "36px Arial";
+            ctx.fillStyle = "white";
+            ctx.textAlign = "center";
+        
+            // Display the game start message
+            ctx.fillText("The Game Has Started!", canvas.width / 2, canvas.height / 4);
+            ctx.fillText(`Mafia: ${mafia}`, canvas.width / 2, canvas.height / 4 + 50);
+            ctx.fillText(`Angel: ${angel}`, canvas.width / 2, canvas.height / 4 + 100);
+        }
+        
+        function gameLoop(gameState) {
+            // Example placeholder for game mechanics
+            const consoleDiv = document.getElementById("console");
+        
+            const interval = setInterval(() => {
+                if (gameState.gameOver) {
+                    clearInterval(interval);
+                    endGame(gameState);
+                    return;
+                }
+        
+                // Example: Rotate turns, update player status, etc.
+                const randomEvent = Math.random();
+                if (randomEvent < 0.5) {
+                    consoleDiv.innerHTML += "<p>The Mafia made a move...</p>";
+                } else {
+                    consoleDiv.innerHTML += "<p>The Angel protected someone...</p>";
+                }
+        
+                // Scroll console to show the latest log
+                consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            }, 3000); // Example game loop interval: 3 seconds
+        }
+        
+        function endGame(gameState) {
+            const ctx = document.getElementById("canvas").getContext("2d");
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+        
+            const winner = gameState.mafia.length === 0 ? "The Townspeople" : "The Mafia";
+            ctx.font = "36px Arial";
+            ctx.fillStyle = "white";
+            ctx.textAlign = "center";
+        
+            // Display the winner on the canvas
+            ctx.fillText(`Game Over! ${winner} Win!`, canvas.width / 2, canvas.height / 2);
+        
+            // Log game over to the console
+            const consoleDiv = document.getElementById("console");
+            consoleDiv.innerHTML += `<p>Game Over! ${winner} Win!</p>`;
         }
 
         async function ask() {

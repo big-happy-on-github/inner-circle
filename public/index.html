@@ -196,9 +196,8 @@
             const newPlayer = {
                 name,
                 game_code: gameCode,
-                character: chosenCharacter.name,
                 image: chosenCharacter.img,
-                status: 'alive',
+                status: 'alive'
             };
         
             const { error } = await supabase.from('players').insert([newPlayer]);

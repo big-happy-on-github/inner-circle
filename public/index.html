@@ -141,257 +141,343 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
     
+        const characters = [
+            { name: 'Hudson', img: 'https://neweralive.na/wp-content/uploads/2024/06/lloyd-sikeba.jpg' },
+            { name: 'Alex', img: 'https://example.com/alex.jpg' }, // Add more characters as needed
+        ];
+
         let host = false;
         let id;
         let role;
-        
-        const characters = [
-            { name: 'Hudson', img: 'https://example.com/hudson.jpg' },
-            { name: 'Alex', img: 'https://example.com/alex.jpg' },
-            { name: 'Taylor', img: 'https://example.com/taylor.jpg' },
-        ];
-        
+    
         // Function to fetch players from Supabase
         async function fetchPlayers(gameCode) {
             const { data, error } = await supabase
                 .from('players')
                 .select('*')
                 .eq('game_code', gameCode);
-        
+    
             if (error) {
                 console.error('Error fetching players:', error);
                 return [];
             }
-        
+    
             return data;
         }
-        
-        // Function to add a new player to the game, with character selection
-        async function addPlayer(gameCode) {
-            let name;
-            while (true) {
-                name = prompt('Enter your name:');
-                if (name) {
-                    if (name.length > 12) {
-                        alert("Name must be less than 12 characters.");
-                    } else {
-                        break;
-                    }
-                } else {
-                    alert('Name is required to join the game.');
-                }
-            }
-        
-            let chosenCharacter = null;
-            while (!chosenCharacter) {
-                const choices = characters.map(c => c.name).join(', ');
-                const choice = prompt(`Choose a character: ${choices}`);
-                chosenCharacter = characters.find(c => c.name.toLowerCase() === choice.toLowerCase());
-        
-                if (!chosenCharacter) {
-                    alert('Invalid choice. Please choose a valid character.');
-                }
-            }
-        
-            const newPlayer = {
-                name,
-                game_code: gameCode,
-                image: chosenCharacter.img,
-                status: 'alive'
-            };
-        
-            const { error } = await supabase.from('players').insert([newPlayer]);
-        
-            if (error) {
-                console.error('Error adding player:', error);
-                alert("You couldn't join the game. Try again.");
-                ask();
-            } else {
-                alert('You have joined the game!');
-                updatePlayersUI(gameCode);
-            }
-        }
-        
+    
         // Function to update the UI with players
         async function updatePlayersUI(gameCode) {
             const players = await fetchPlayers(gameCode);
         
+            // Update the game code display
+            document.getElementById("code").textContent = game code: ${gameCode};
+        
+            // Re-render the players on canvas
+            renderPlayersOnCanvas(players);
+
             if (host) {
-                const startButton = document.getElementById('start');
                 if (players.length < 4) {
-                    startButton.textContent = `Cannot start game (+${4 - players.length} players needed)`;
+                    document.getElementById("start").textContent = cannot start game (+${4-players.length} players needed);
                 } else {
-                    startButton.textContent = `Start game (${players.length}/4)`;
-                    startButton.onclick = () => start(gameCode);
+                    document.getElementById("start").textContent = start game (${players.length}/4);
+                    document.getElementById("start").onclick = () => start(gameCode); // Assign a function directly
                 }
-                startButton.style.display = 'block';
+                document.getElementById("start").style.display = "block"
             }
         }
+    
+        // Function to render players on the canvas
+        function renderPlayersOnCanvas(players) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
         
-        // Function to add a game log to the database
-        async function addGameLog(gameId, message) {
-            const { error } = await supabase.from('game_logs').insert([
-                {
-                    game_id: gameId,
-                    log_message: message,
-                },
-            ]);
+            const imageSize = 300; // Set image size to 300x300
+            const gap = 20; // Gap between images
+            const totalImageWidth = players.length * imageSize + (players.length - 1) * gap;
+            const startX = (canvas.width - totalImageWidth) / 2; // Center the images
+            const y = (canvas.height - imageSize) / 2 - 200; // Center vertically
         
+            let currentX = startX;
+        
+            players.forEach(player => {
+                const img = new Image();
+                img.src = player.image;
+                img.onload = () => {
+                    // Draw circular image
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(
+                        currentX + imageSize / 2, // Center x of the circle
+                        y + imageSize / 2, // Center y of the circle
+                        imageSize / 2, // Radius
+                        0, // Start angle
+                        Math.PI * 2 // End angle
+                    );
+                    ctx.closePath();
+                    ctx.clip();
+        
+                    ctx.drawImage(img, currentX, y, imageSize, imageSize);
+                    ctx.restore();
+
+                    // Set text properties
+                    ctx.font = '30px Arial'; // Set font size and family
+                    ctx.fillStyle = 'yellow';  // Set fill color
+                    ctx.textAlign = 'center'; // Center align text
+                    ctx.textBaseline = 'middle'; // Vertical alignment to the middle
+            
+                    // Draw text
+                    ctx.fillText(player.name, currentX + gap, y + gap);
+        
+                    currentX += imageSize + gap; // Move to the next position
+                };
+            });
+            const img = new Image();
+            img.src = "/imgs/table.png";
+            img.onload = () => {
+                const imgWidth = canvas.width / 2; // Scale to half the canvas width
+                const imgHeight = canvas.height / 2; // Scale to half the canvas height
+            
+                const x = (canvas.width - imgWidth) / 2; // Center horizontally
+                const y = (canvas.height - imgHeight) / 2 + 50; // Center vertically
+            
+                ctx.drawImage(img, x, y, imgWidth, imgHeight);
+            };
+        }
+    
+        // Function to add a new player to the game
+        async function addPlayer(gameCode) {
+            let name;
+            while (true) {
+                name = prompt('enter your name:');
+                if (name) {
+                    if (name.length > 12) {
+                        alert("name must be less than 12 characters");
+                    } else {
+                        break;
+                    }
+                } else {
+                    alert('name is required to join the game.');
+                }
+            }
+    
+            let chosenCharacter = null;
+            while (!chosenCharacter) {
+                const choices = characters.map(c => c.name).join(', ');
+                const choice = prompt(choose a character: ${choices});
+                chosenCharacter = characters.find(c => c.name.toLowerCase() === choice.toLowerCase());
+    
+                if (!chosenCharacter) {
+                    alert('not a choice man');
+                }
+            }
+    
+            const newPlayer = {
+                name: name,
+                image: chosenCharacter.img,
+                game_code: gameCode,
+            };
+    
+            const { error } = await supabase.from('players').insert([newPlayer]);
+    
             if (error) {
-                console.error('Error adding game log:', error);
+                console.error('Error adding player:', error);
+                alert("you couldn't join the game. mb mb");
+                ask();
+            } else {
+                alert('you have joined the game');
+                updatePlayersUI(gameCode);
+            }
+        }
+    
+        async function performAction(actionType, targetId, gameCode) {
+            const { error } = await supabase
+                .from('actions')
+                .insert([{ player_id: id, action_type: actionType, target_id: targetId, game_code: gameCode }]);
+            
+            if (error) {
+                console.error("Error performing action:", error);
+                alert("Action could not be performed. Try again.");
+            } else {
+                alert(`Action ${actionType} performed on player ${targetId}`);
             }
         }
         
-        // Function to fetch and display game logs
-        async function fetchGameLogs(gameId) {
+        async function handlePhase(gameCode) {
             const { data, error } = await supabase
-                .from('game_logs')
+                .from('games')
                 .select('*')
-                .eq('game_id', gameId)
-                .order('created_at', { ascending: true });
+                .eq('game_code', gameCode)
+                .single();
         
-            if (error) {
-                console.error('Error fetching game logs:', error);
+            if (error || !data) {
+                console.error("Error fetching game phase:", error);
                 return;
             }
         
-            const consoleDiv = document.getElementById('console');
-            consoleDiv.innerHTML = ""; // Clear existing logs
-            data.forEach((log) => {
-                consoleDiv.innerHTML += `<p>${log.log_message}</p>`;
-            });
+            const game = data;
+            if (game.phase === 'night') {
+                if (role === 'mafia') {
+                    const targetId = prompt("Choose a player to eliminate:");
+                    performAction("kill", targetId, gameCode);
+                } else if (role === 'angel') {
+                    const targetId = prompt("Choose a player to protect:");
+                    performAction("protect", targetId, gameCode);
+                }
+            } else if (game.phase === 'voting') {
+                const targetId = prompt("Vote to eliminate a player:");
+                performAction("vote", targetId, gameCode);
+            }
         }
         
-        // Function to start the game
+        async function transitionPhase(gameCode) {
+            const { data, error } = await supabase
+                .from('games')
+                .select('phase')
+                .eq('game_code', gameCode)
+                .single();
+        
+            if (error || !data) {
+                console.error("Error fetching current phase:", error);
+                return;
+            }
+        
+            const currentPhase = data.phase;
+            let nextPhase;
+        
+            if (currentPhase === 'night') {
+                nextPhase = 'voting';
+            } else if (currentPhase === 'voting') {
+                nextPhase = 'day';
+            } else {
+                nextPhase = 'night';
+            }
+        
+            const { error: updateError } = await supabase
+                .from('games')
+                .update({ phase: nextPhase })
+                .eq('game_code', gameCode);
+        
+            if (updateError) {
+                console.error("Error transitioning phase:", updateError);
+            } else {
+                alert(`Game phase transitioned to ${nextPhase}`);
+            }
+        }
+        
+        function setupRealTimeUpdates(gameCode) {
+            supabase
+                .channel('realtime:players')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `game_code=eq.${gameCode}` }, payload => {
+                    log(payload);
+                    updatePlayersUI(gameCode); // Update UI whenever there's a change
+                })
+                .subscribe();
+        
+            supabase
+                .channel('realtime:games')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `game_code=eq.${gameCode}` }, payload => {
+                    log(payload);
+                    if (payload.new.status === "ended") {
+                        handleGameEnd(payload.new);
+                    } else if (payload.new.phase) {
+                        handlePhase(gameCode);
+                    }
+                })
+                .subscribe();
+        
+            supabase
+                .channel('realtime:actions')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'actions', filter: `game_code=eq.${gameCode}` }, payload => {
+                    log(payload);
+                })
+                .subscribe();
+        }
+
+        // Updated game initialization
         async function start(gameCode) {
             if (!host) return;
         
             const players = await fetchPlayers(gameCode);
+            const shuffledPlayers = shuffle(players);
+            const mafia = shuffledPlayers[0];
+            const angel = shuffledPlayers[1];
+            const citizens = shuffledPlayers.slice(2);
         
-            // Assign roles
-            function assignRoles(players) {
-                const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
-                return {
-                    mafia: shuffledPlayers[0],
-                    angel: shuffledPlayers[1],
-                    townsfolk: shuffledPlayers.slice(2),
-                };
-            }
+            const roles = {
+                mafia: [mafia.id],
+                angel: [angel.id],
+                citizens: citizens.map(c => c.id),
+            };
         
-            const roles = assignRoles(players);
-        
-            // Save roles in the database
             const { error } = await supabase
                 .from('games')
-                .update({ roles, status: 'playing' })
+                .update({ roles, phase: 'night', status: 'playing' })
                 .eq('game_code', gameCode);
         
             if (error) {
-                console.error('Error starting game:', error);
-                alert('Error starting the game. Try again.');
-                return;
-            }
-        
-            addGameLog(gameCode, 'The game has started!');
-            startGame(roles, gameCode); // Start the gameplay
-        }
-        
-        // Start the game loop
-        function startGame(roles, gameCode) {
-            let gameState = {
-                players: [...roles.mafia, ...roles.angel, ...roles.townsfolk],
-                mafia: roles.mafia,
-                angel: roles.angel,
-                townsfolk: roles.townsfolk,
-                phase: 'night', // Start with the night phase
-                eliminated: [],
-                gameOver: false,
-            };
-        
-            fetchGameLogs(gameCode); // Load and display existing logs
-            runGameLoop(gameState, gameCode);
-        }
-        
-        // Run the game loop
-        function runGameLoop(gameState, gameCode) {
-            const consoleDiv = document.getElementById('console');
-        
-            const interval = setInterval(() => {
-                if (gameState.gameOver) {
-                    clearInterval(interval);
-                    endGame(gameState, gameCode);
-                    return;
-                }
-        
-                if (gameState.phase === 'night') {
-                    handleNightPhase(gameState, gameCode);
-                } else if (gameState.phase === 'day') {
-                    handleDayPhase(gameState, gameCode);
-                }
-        
-                consoleDiv.scrollTop = consoleDiv.scrollHeight;
-            }, 5000);
-        }
-        
-        // Handle the night phase
-        function handleNightPhase(gameState, gameCode) {
-            const mafiaChoice = prompt('Mafia, choose a player to eliminate:');
-            const angelChoice = prompt('Angel, choose a player to protect:');
-        
-            const eliminated = mafiaChoice === angelChoice ? null : mafiaChoice;
-        
-            if (eliminated) {
-                gameState.eliminated.push(eliminated);
-                gameState.players = gameState.players.filter((p) => p.name !== eliminated);
-                addGameLog(gameCode, `Player ${eliminated} was eliminated during the night.`);
+                console.error("Error starting the game:", error);
             } else {
-                addGameLog(gameCode, `Angel protected their target. No one was eliminated.`);
-            }
-        
-            gameState.phase = 'day';
-        }
-        
-        // Handle the day phase
-        function handleDayPhase(gameState, gameCode) {
-            const vote = prompt('Townsfolk, vote to eliminate a player:');
-            gameState.eliminated.push(vote);
-            gameState.players = gameState.players.filter((p) => p.name !== vote);
-            addGameLog(gameCode, `Player ${vote} was eliminated by vote during the day.`);
-        
-            checkGameOver(gameState, gameCode);
-            gameState.phase = 'night';
-        }
-        
-        // Check for game-over conditions
-        function checkGameOver(gameState, gameCode) {
-            const mafiaAlive = gameState.players.find((p) => p.role === 'mafia');
-            const townsfolkAlive = gameState.players.filter((p) => p.role === 'townsfolk');
-        
-            if (!mafiaAlive || townsfolkAlive.length === 0) {
-                gameState.gameOver = true;
+                alert("Game started. Roles assigned.");
             }
         }
+        window.start = start;
+
+        function log(payload) {
+            const p = document.createElement("p");
         
-        // End the game
-        function endGame(gameState, gameCode) {
-            const winner = gameState.players.some((p) => p.role === 'mafia') ? 'Mafia' : 'Townsfolk';
-            addGameLog(gameCode, `Game Over! ${winner} win!`);
-            alert(`Game Over! ${winner} win!`);
+            if (payload.table === "players") {
+                if (payload.eventType === "INSERT" && payload.new.name) {
+                    p.textContent = `${payload.new.name} joined the game.`;
+                }
+            } else if (payload.table === "games") {
+                if (payload.eventType === "UPDATE") {
+                    if (payload.new.status === "playing") {
+                        p.textContent = "The game is starting...";
+                    } else if (payload.new.status === "ended") {
+                        p.textContent = "The game has ended.";
+                        alert("Game Over! Check the console for results.");
+                    }
+                    
+                    if (payload.new.roles && !role) {
+                        const roles = payload.new.roles;
+                        if (roles.mafia.includes(id)) {
+                            role = "mafia";
+                            alert("You're the Mafia! Eliminate the other players.");
+                        } else if (roles.angel.includes(id)) {
+                            role = "angel";
+                            alert("You're the Angel! Protect your allies.");
+                        } else {
+                            role = "citizen";
+                            alert("You're a Citizen! Work with others to identify the Mafia.");
+                        }
+                    }
+        
+                    if (payload.new.phase) {
+                        p.textContent = `The game phase has changed to ${payload.new.phase}.`;
+                    }
+                }
+            } else if (payload.table === "actions") {
+                if (payload.eventType === "INSERT") {
+                    const action = payload.new;
+                    const actionLog = `${action.player_id} performed a ${action.action_type} on ${action.target_id}.`;
+                    p.textContent = actionLog;
+                }
+            }
+        
+            document.getElementById("console").appendChild(p);
         }
-        
-        // Ask to join or create a game
+
         async function ask() {
             let code;
-            if (confirm("Do you want to join a game? Press 'Cancel' to create a new game.")) {
+            if (confirm("do you want to join a game? if not (meaning you want to create a game), press cancel")) {
                 while (true) {
-                    code = prompt("Game code:");
+                    code = prompt("game code:");
                     const { data, error } = await supabase
                         .from('games')
                         .select('*')
                         .eq('game_code', code)
                         .single();
-                    if (error || !data.game_code || data.status !== "waiting") {
-                        alert("Invalid game code. Try again.");
+                    if (error || !data.game_code || data.status != "waiting") {
+                        alert("not a valid game code...");
                     } else {
                         break;
                     }
@@ -399,7 +485,7 @@
                 addPlayer(code);
             } else {
                 code = Math.floor(100000 + Math.random() * 900000);
-                alert(`Game created! Game code: ${code}`);
+                alert(game created! game code: ${code});
                 const { data, error } = await supabase
                     .from('games')
                     .insert([{ game_code: code, status: "waiting", roles: {} }])
@@ -410,25 +496,8 @@
             }
             setupRealTimeUpdates(code);
         }
-        
-        // Set up real-time updates
-        function setupRealTimeUpdates(gameCode) {
-            supabase
-                .channel('realtime:players')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `game_code=eq.${gameCode}` }, payload => {
-                    updatePlayersUI(gameCode);
-                })
-                .subscribe();
-        
-            supabase
-                .channel('realtime:games')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `game_code=eq.${gameCode}` }, payload => {
-                    updatePlayersUI(gameCode);
-                })
-                .subscribe();
-        }
-        
-        // Initialize the game
+    
+        // On load, ask for game code and start fetching data
         document.addEventListener('DOMContentLoaded', () => {
             setTimeout(ask, 1250);
         });

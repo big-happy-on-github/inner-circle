@@ -218,14 +218,89 @@
             // Disable other interactive UI elements as necessary
         }
 
-        async function handleElimination(playerId, gameCode) {
-            await updatePlayerStatus(playerId, "eliminated");
-
-            if (playerId === id) {
-                restrictPlayerInteractions();
+        // Function to handle elimination during the night phase with angel protection
+        async function handleNightElimination(gameCode, targetId) {
+            const { data: actions, error: actionsError } = await supabase
+                .from('actions')
+                .select('*')
+                .eq('game_code', gameCode)
+                .in('action_type', ['kill', 'protect']);
+        
+            if (actionsError) {
+                console.error("Error fetching actions:", actionsError);
+                return;
             }
-
+        
+            const killAction = actions.find(action => action.action_type === 'kill' && action.target_id === targetId);
+            const protectAction = actions.find(action => action.action_type === 'protect' && action.target_id === targetId);
+        
+            if (killAction && !protectAction) {
+                // Player is killed
+                await updatePlayerStatus(targetId, "eliminated");
+                alert(`Player ${targetId} has been eliminated.`);
+            } else if (killAction && protectAction) {
+                // Player is protected by the angel
+                alert(`Player ${targetId} was targeted, but the angel protected them.`);
+            }
             checkGameStatus(gameCode);
+        }
+        
+        async function handleVotingElimination(gameCode) {
+            // Fetch alive players
+            const { data: players, error: playersError } = await supabase
+                .from('players')
+                .select('*')
+                .eq('game_code', gameCode)
+                .eq('status', 'alive');
+        
+            if (playersError) {
+                console.error("Error fetching alive players:", playersError);
+                return;
+            }
+        
+            const alivePlayerCount = players.length;
+        
+            // Poll for votes until all players have submitted
+            const interval = setInterval(async () => {
+                const { data: actions, error: actionsError } = await supabase
+                    .from('actions')
+                    .select('*')
+                    .eq('game_code', gameCode)
+                    .eq('action_type', 'vote');
+        
+                if (actionsError) {
+                    console.error("Error fetching votes:", actionsError);
+                    return;
+                }
+        
+                // Check if all alive players have voted
+                if (actions.length >= alivePlayerCount) {
+                    clearInterval(interval); // Stop the polling once all votes are in
+        
+                    // Count votes
+                    const voteCounts = actions.reduce((counts, action) => {
+                        counts[action.target_id] = (counts[action.target_id] || 0) + 1;
+                        return counts;
+                    }, {});
+        
+                    // Determine the player with the most votes
+                    const [mostVotedPlayer, maxVotes] = Object.entries(voteCounts).reduce(
+                        ([currentPlayer, currentVotes], [playerId, votes]) =>
+                            votes > currentVotes ? [playerId, votes] : [currentPlayer, currentVotes],
+                        [null, 0]
+                    );
+        
+                    if (mostVotedPlayer) {
+                        // Eliminate the most-voted player
+                        await updatePlayerStatus(mostVotedPlayer, "eliminated");
+                        alert(`Player ${mostVotedPlayer} has been voted out with ${maxVotes} votes.`);
+                    } else {
+                        alert("No votes were cast.");
+                    }
+        
+                    checkGameStatus(gameCode); // Check if the game has ended
+                }
+            }, 1000); // Poll every second
         }
 
         supabase
@@ -446,8 +521,20 @@
             let nextPhase;
         
             if (currentPhase === 'night') {
+                const { data: actions } = await supabase
+                    .from('actions')
+                    .select('*')
+                    .eq('game_code', gameCode)
+                    .eq('action_type', 'kill');
+        
+                if (actions && actions.length > 0) {
+                    for (const action of actions) {
+                        await handleNightElimination(gameCode, action.target_id);
+                    }
+                }
                 nextPhase = 'voting';
             } else if (currentPhase === 'voting') {
+                await handleVotingElimination(gameCode);
                 nextPhase = 'day';
             } else {
                 nextPhase = 'night';

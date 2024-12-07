@@ -455,6 +455,8 @@
                     
                     if (payload.new.roles && !role) {
                         const roles = payload.new.roles;
+                        console.log(roles);
+                        console.log(id);
                         if (roles.mafia.includes(id)) {
                             role = "mafia";
                             alert("You're the Mafia! Eliminate the other players.");

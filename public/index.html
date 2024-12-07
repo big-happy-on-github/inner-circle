@@ -445,29 +445,37 @@
             }
         }
     
-        async function performAction(actionType, targetId, gameCode) {
-            // Check if the target is alive
+        async function performAction(actionType, targetName, gameCode) {
+            // Fetch the target's ID by name
             const { data: targetPlayer, error: targetError } = await supabase
                 .from('players')
-                .select('status')
-                .eq('id', targetId)
+                .select('id, status')
+                .eq('game_code', gameCode)
+                .eq('name', targetName)
                 .single();
         
-            if (targetError) {
-                console.error("Error fetching target player status:", targetError);
-                alert("can't do that");
+            if (targetError || !targetPlayer) {
+                console.error("Error fetching target player by name:", targetError);
+                alert(`Player "${targetName}" could not be found in this game.`);
                 return;
             }
         
             if (targetPlayer.status !== "alive") {
-                alert("that person isn't alive");
+                alert(`Action failed: Player "${targetName}" is not alive.`);
                 return;
             }
         
-            // Perform the action
+            // Perform the action using the target's ID
             const { error: actionError } = await supabase
                 .from('actions')
-                .insert([{ player_id: id, action_type: actionType, target_id: targetId, game_code: gameCode }]);
+                .insert([{ player_id: id, action_type: actionType, target_id: targetPlayer.id, game_code: gameCode }]);
+        
+            if (actionError) {
+                console.error("Error performing action:", actionError);
+                alert("Action could not be performed. Try again.");
+            } else {
+                alert(`Action ${actionType} performed on player "${targetName}".`);
+            }
         }
         
         async function handlePhase(gameCode) {

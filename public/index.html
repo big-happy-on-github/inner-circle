@@ -549,7 +549,11 @@
             supabase
                 .channel('realtime:players')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `game_code=eq.${gameCode}` }, payload => {
-                    log(payload);
+                    if (payload.new.status === "eliminated" && payload.new.id === id) {
+                        restrictPlayerInteractions();
+                    } else {
+                        log(payload);
+                    }
                     updatePlayersUI(gameCode); // Update UI whenever there's a change
                 })
                 .subscribe();
@@ -570,25 +574,6 @@
                 .channel('realtime:actions')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'actions', filter: `game_code=eq.${gameCode}` }, payload => {
                     log(payload);
-                })
-                .subscribe();
-
-            supabase
-                .channel('realtime:players')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `game_code=eq.${gameCode}` }, payload => {
-                    if (payload.new.status === "eliminated" && payload.new.id === id) {
-                        restrictPlayerInteractions();
-                    }
-                })
-                .subscribe();
-    
-            supabase
-                .channel('realtime:games')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `game_code=eq.${gameCode}` }, payload => {
-                    if (payload.new.status === "ended") {
-                        alert("The host has closed the game. Game ended.");
-                        window.location.reload();
-                    }
                 })
                 .subscribe();
         }
@@ -651,8 +636,8 @@
                         p.textContent = "The game is starting...";
                         document.getElementById("start").style.display = "none";
                     } else if (payload.new.status === "ended") {
-                        p.textContent = "The game has ended.";
-                        alert("Game Over! Check the console for results.");
+                        alert("game ended");
+                        window.location.reload();
                     }
                     
                     if (payload.new.roles && !role) {

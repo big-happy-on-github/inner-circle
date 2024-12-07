@@ -330,6 +330,7 @@
                 const targetId = prompt("Vote to eliminate a player:");
                 performAction("vote", targetId, gameCode);
             }
+            transitionPhase(gameCode);
         }
         
         async function transitionPhase(gameCode) {
@@ -363,7 +364,7 @@
             if (updateError) {
                 console.error("Error transitioning phase:", updateError);
             } else {
-                alert(`Game phase transitioned to ${nextPhase}`);
+                alert(`is has turned ${nextPhase}...`);
             }
         }
         
@@ -480,7 +481,7 @@
             } else if (payload.table === "actions") {
                 if (payload.eventType === "INSERT") {
                     const action = payload.new;
-                    const actionLog = `${action.player_id} performed a ${action.action_type} on ${action.target_id}.`;
+                    const actionLog = `someone ${action.action_type}ed ${action.target_id}`;
                     p.textContent = actionLog;
                 }
             }

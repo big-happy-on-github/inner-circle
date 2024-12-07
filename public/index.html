@@ -499,50 +499,100 @@
         }
         
         async function transitionPhase(gameCode) {
-            const { data, error } = await supabase
+            const { data: game, error: gameError } = await supabase
                 .from('games')
-                .select('phase')
+                .select('phase, roles')
                 .eq('game_code', gameCode)
                 .single();
         
-            if (error || !data) {
-                console.error("Error fetching current phase:", error);
+            if (gameError || !game) {
+                console.error("Error fetching game phase:", gameError);
                 return;
             }
         
-            const currentPhase = data.phase;
-            let nextPhase;
+            const currentPhase = game.phase;
+            const roles = game.roles;
         
-            if (currentPhase === 'night') {
-                const { data: actions } = await supabase
+            // Helper function to check if all actions for the phase are complete
+            async function actionsComplete(phase) {
+                const { data: players, error: playersError } = await supabase
+                    .from('players')
+                    .select('id, status')
+                    .eq('game_code', gameCode)
+                    .eq('status', 'alive');
+        
+                if (playersError) {
+                    console.error("Error fetching alive players:", playersError);
+                    return false;
+                }
+        
+                const alivePlayers = players.length;
+        
+                const { data: actions, error: actionsError } = await supabase
                     .from('actions')
                     .select('*')
-                    .eq('game_code', gameCode)
-                    .eq('action_type', 'kill');
+                    .eq('game_code', gameCode);
         
-                if (actions && actions.length > 0) {
-                    for (const action of actions) {
-                        await handleNightElimination(gameCode, action.target_id);
+                if (actionsError) {
+                    console.error("Error fetching actions:", actionsError);
+                    return false;
+                }
+        
+                if (phase === 'night') {
+                    // Check if mafia and angel have acted
+                    const mafiaActions = actions.filter(action => action.action_type === 'kill');
+                    const angelActions = actions.filter(action => action.action_type === 'protect');
+                    return mafiaActions.length === roles.mafia.length && angelActions.length === roles.angel.length;
+                }
+        
+                if (phase === 'voting') {
+                    // Check if all alive players have voted
+                    const votes = actions.filter(action => action.action_type === 'vote');
+                    return votes.length === alivePlayers;
+                }
+        
+                return true; // For other phases, assume actions are complete
+            }
+        
+            // Wait for all actions to complete before transitioning
+            const interval = setInterval(async () => {
+                if (await actionsComplete(currentPhase)) {
+                    clearInterval(interval); // Stop polling once actions are complete
+        
+                    let nextPhase;
+        
+                    if (currentPhase === 'night') {
+                        const { data: actions } = await supabase
+                            .from('actions')
+                            .select('*')
+                            .eq('game_code', gameCode)
+                            .eq('action_type', 'kill');
+        
+                        if (actions && actions.length > 0) {
+                            for (const action of actions) {
+                                await handleNightElimination(gameCode, action.target_id);
+                            }
+                        }
+                        nextPhase = 'voting';
+                    } else if (currentPhase === 'voting') {
+                        await handleVotingElimination(gameCode);
+                        nextPhase = 'day';
+                    } else {
+                        nextPhase = 'night';
+                    }
+        
+                    const { error: updateError } = await supabase
+                        .from('games')
+                        .update({ phase: nextPhase })
+                        .eq('game_code', gameCode);
+        
+                    if (updateError) {
+                        console.error("Error transitioning phase:", updateError);
+                    } else {
+                        alert(`The phase has transitioned to ${nextPhase}.`);
                     }
                 }
-                nextPhase = 'voting';
-            } else if (currentPhase === 'voting') {
-                await handleVotingElimination(gameCode);
-                nextPhase = 'day';
-            } else {
-                nextPhase = 'night';
-            }
-        
-            const { error: updateError } = await supabase
-                .from('games')
-                .update({ phase: nextPhase })
-                .eq('game_code', gameCode);
-        
-            if (updateError) {
-                console.error("Error transitioning phase:", updateError);
-            } else {
-                alert(`is has turned ${nextPhase}...`);
-            }
+            }, 1000); // Poll every second
         }
         
         function setupRealTimeUpdates(gameCode) {

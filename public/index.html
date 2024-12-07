@@ -302,25 +302,6 @@
                 }
             }, 1000); // Poll every second
         }
-
-        supabase
-            .channel('realtime:players')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `game_code=eq.${gameCode}` }, payload => {
-                if (payload.new.status === "eliminated" && payload.new.id === id) {
-                    restrictPlayerInteractions();
-                }
-            })
-            .subscribe();
-
-        supabase
-            .channel('realtime:games')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `game_code=eq.${gameCode}` }, payload => {
-                if (payload.new.status === "ended") {
-                    alert("The host has closed the game. Game ended.");
-                    window.location.reload();
-                }
-            })
-            .subscribe();
         
         // Function to fetch players from Supabase
         async function fetchPlayers(gameCode) {
@@ -589,6 +570,25 @@
                 .channel('realtime:actions')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'actions', filter: `game_code=eq.${gameCode}` }, payload => {
                     log(payload);
+                })
+                .subscribe();
+
+            supabase
+                .channel('realtime:players')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `game_code=eq.${gameCode}` }, payload => {
+                    if (payload.new.status === "eliminated" && payload.new.id === id) {
+                        restrictPlayerInteractions();
+                    }
+                })
+                .subscribe();
+    
+            supabase
+                .channel('realtime:games')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `game_code=eq.${gameCode}` }, payload => {
+                    if (payload.new.status === "ended") {
+                        alert("The host has closed the game. Game ended.");
+                        window.location.reload();
+                    }
                 })
                 .subscribe();
         }

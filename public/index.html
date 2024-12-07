@@ -149,7 +149,104 @@
         let host = false;
         let id;
         let role;
-    
+
+
+        async function checkGameStatus(gameCode) {
+            const { data, error } = await supabase
+                .from('games')
+                .select('*')
+                .eq('game_code', gameCode)
+                .single();
+
+            if (error || !data) {
+                console.error("Error fetching game status:", error);
+                return;
+            }
+
+            const roles = data.roles || {};
+            const players = await fetchPlayers(gameCode);
+
+            const mafiaAlive = roles.mafia.some(id => players.some(p => p.id === id && p.status === "alive"));
+            const citizensAlive = players.filter(p => roles.citizens.includes(p.id) && p.status === "alive").length;
+
+            if (!mafiaAlive) {
+                alert("Citizens Win!");
+                endGame(gameCode, "Citizens Win");
+            } else if (mafiaAlive && citizensAlive === 1) {
+                alert("Mafia Wins!");
+                endGame(gameCode, "Mafia Wins");
+            }
+        }
+
+        async function endGame(gameCode, result) {
+            const { error } = await supabase
+                .from('games')
+                .update({ status: "ended", result })
+                .eq('game_code', gameCode);
+
+            if (error) {
+                console.error("Error ending the game:", error);
+            } else {
+                alert(`Game Over! ${result}`);
+            }
+        }
+
+        function handleHostTab(gameCode) {
+            window.addEventListener('beforeunload', async () => {
+                if (host) {
+                    await supabase
+                        .from('games')
+                        .update({ status: "ended" })
+                        .eq('game_code', gameCode);
+                }
+            });
+        }
+
+        async function updatePlayerStatus(playerId, status) {
+            const { error } = await supabase
+                .from('players')
+                .update({ status })
+                .eq('id', playerId);
+
+            if (error) {
+                console.error("Error updating player status:", error);
+            }
+        }
+
+        function restrictPlayerInteractions() {
+            alert("You have been eliminated. You can view the game but cannot interact further.");
+            // Disable other interactive UI elements as necessary
+        }
+
+        async function handleElimination(playerId, gameCode) {
+            await updatePlayerStatus(playerId, "eliminated");
+
+            if (playerId === id) {
+                restrictPlayerInteractions();
+            }
+
+            checkGameStatus(gameCode);
+        }
+
+        supabase
+            .channel('realtime:players')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `game_code=eq.${gameCode}` }, payload => {
+                if (payload.new.status === "eliminated" && payload.new.id === id) {
+                    restrictPlayerInteractions();
+                }
+            })
+            .subscribe();
+
+        supabase
+            .channel('realtime:games')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `game_code=eq.${gameCode}` }, payload => {
+                if (payload.new.status === "ended") {
+                    alert("The host has closed the game. Game ended.");
+                    window.location.reload();
+                }
+            })
+            .subscribe();
+        
         // Function to fetch players from Supabase
         async function fetchPlayers(gameCode) {
             const { data, error } = await supabase
@@ -453,6 +550,7 @@
                 if (payload.eventType === "UPDATE") {
                     if (payload.new.status === "playing") {
                         p.textContent = "The game is starting...";
+                        document.getElementById("start").style.display = "none";
                     } else if (payload.new.status === "ended") {
                         p.textContent = "The game has ended.";
                         alert("Game Over! Check the console for results.");
@@ -481,7 +579,13 @@
             } else if (payload.table === "actions") {
                 if (payload.eventType === "INSERT") {
                     const action = payload.new;
-                    const actionLog = `someone ${action.action_type}ed ${action.target_id}`;
+                    if (action.action_type == "kill") {
+                        const actionLog = `mafia killed ${action.target_id}`;
+                    } else if (action.action_type == "protect") {
+                        const actionLog = `angel protected ${action.target_id}`;
+                    } else if (action.action_type == "vote") {
+                        const actionLog = `someone voted for ${action.target_id}`;
+                    }
                     p.textContent = actionLog;
                 }
             }

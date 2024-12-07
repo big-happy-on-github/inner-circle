@@ -392,21 +392,25 @@
                 .subscribe();
         }
 
-        // Updated game initialization
         async function start(gameCode) {
             if (!host) return;
-
+        
             function shuffle(array) {
                 for (let i = array.length - 1; i > 0; i--) {
-                    // Pick a random index from 0 to i
                     const randomIndex = Math.floor(Math.random() * (i + 1));
-                    // Swap elements at index i and the random index
                     [array[i], array[randomIndex]] = [array[randomIndex], array[i]];
                 }
                 return array;
             }
         
             const players = await fetchPlayers(gameCode);
+            console.log("Players fetched for role assignment:", players);
+        
+            if (players.length < 4) {
+                alert("Not enough players to start the game.");
+                return;
+            }
+        
             const shuffledPlayers = shuffle(players);
             const mafia = shuffledPlayers[0];
             const angel = shuffledPlayers[1];
@@ -417,6 +421,8 @@
                 angel: [angel.id],
                 citizens: citizens.map(c => c.id),
             };
+        
+            console.log("Assigned roles:", roles);
         
             const { error } = await supabase
                 .from('games')

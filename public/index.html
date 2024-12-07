@@ -262,7 +262,7 @@
             let chosenCharacter = null;
             while (!chosenCharacter) {
                 const choices = characters.map(c => c.name).join(', ');
-                const choice = prompt(choose a character: ${choices});
+                const choice = prompt(`choose a character: ${choices})`;
                 chosenCharacter = characters.find(c => c.name.toLowerCase() === choice.toLowerCase());
     
                 if (!chosenCharacter) {
@@ -485,7 +485,7 @@
                 addPlayer(code);
             } else {
                 code = Math.floor(100000 + Math.random() * 900000);
-                alert(game created! game code: ${code});
+                alert(`game created! game code: ${code}`);
                 const { data, error } = await supabase
                     .from('games')
                     .insert([{ game_code: code, status: "waiting", roles: {} }])

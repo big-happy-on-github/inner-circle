@@ -465,16 +465,28 @@
         }
     
         async function performAction(actionType, targetId, gameCode) {
-            const { error } = await supabase
+            // Check if the target is alive
+            const { data: targetPlayer, error: targetError } = await supabase
+                .from('players')
+                .select('status')
+                .eq('id', targetId)
+                .single();
+        
+            if (targetError) {
+                console.error("Error fetching target player status:", targetError);
+                alert("can't do that");
+                return;
+            }
+        
+            if (targetPlayer.status !== "alive") {
+                alert("that person isn't alive");
+                return;
+            }
+        
+            // Perform the action
+            const { error: actionError } = await supabase
                 .from('actions')
                 .insert([{ player_id: id, action_type: actionType, target_id: targetId, game_code: gameCode }]);
-            
-            if (error) {
-                console.error("Error performing action:", error);
-                alert("Action could not be performed. Try again.");
-            } else {
-                alert(`Action ${actionType} performed on player ${targetId}`);
-            }
         }
         
         async function handlePhase(gameCode) {

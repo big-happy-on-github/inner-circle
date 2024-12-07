@@ -276,7 +276,11 @@
                 game_code: gameCode,
             };
     
-            const { error } = await supabase.from('players').insert([newPlayer]);
+            const { data, error } = await supabase
+                .from('players')
+                .insert([newPlayer])
+                .select();
+            id = data[0].id;
     
             if (error) {
                 console.error('Error adding player:', error);
@@ -506,10 +510,7 @@
                 alert(`game created! game code: ${code}`);
                 const { data, error } = await supabase
                     .from('games')
-                    .insert([{ game_code: code, status: "waiting", roles: {} }])
-                    .select();
-                id = data[0].id;
-                console.log(id);
+                    .insert([{ game_code: code, status: "waiting", roles: {} }]);
                 host = true;
                 addPlayer(code);
             }

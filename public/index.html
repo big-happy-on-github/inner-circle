@@ -457,12 +457,12 @@
             if (targetError || !targetPlayer) {
                 console.error("Error fetching target player by name:", targetError);
                 alert(`Player "${targetName}" could not be found in this game.`);
-                return;
+                return false;
             }
         
             if (targetPlayer.status !== "alive") {
                 alert(`Action failed: Player "${targetName}" is not alive.`);
-                return;
+                return false;
             }
         
             // Perform the action using the target's ID
@@ -493,15 +493,33 @@
             const game = data;
             if (game.phase === 'night') {
                 if (role === 'mafia') {
-                    const targetId = prompt("Choose a player to eliminate:");
-                    performAction("kill", targetId, gameCode);
+                    let actionSuccess = false;
+                    while (!actionSuccess) {
+                        const targetName = prompt("Choose a player to eliminate:");
+                        actionSuccess = await performAction("kill", targetName, gameCode);
+                        if (!actionSuccess) {
+                            alert("Action failed. Please choose a valid target.");
+                        }
+                    }
                 } else if (role === 'angel') {
-                    const targetId = prompt("Choose a player to protect:");
-                    performAction("protect", targetId, gameCode);
+                    let actionSuccess = false;
+                    while (!actionSuccess) {
+                        const targetName = prompt("Choose a player to protect:");
+                        actionSuccess = await performAction("protect", targetName, gameCode);
+                        if (!actionSuccess) {
+                            alert("Action failed. Please choose a valid target.");
+                        }
+                    }
                 }
             } else if (game.phase === 'voting') {
-                const targetId = prompt("Vote to eliminate a player:");
-                performAction("vote", targetId, gameCode);
+                let actionSuccess = false;
+                while (!actionSuccess) {
+                    const targetName = prompt("Vote to eliminate a player:");
+                    actionSuccess = await performAction("vote", targetName, gameCode);
+                    if (!actionSuccess) {
+                        alert("Action failed. Please choose a valid target.");
+                    }
+                }
             }
             transitionPhase(gameCode);
         }

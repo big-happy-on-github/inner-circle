@@ -262,7 +262,7 @@
             let chosenCharacter = null;
             while (!chosenCharacter) {
                 const choices = characters.map(c => c.name).join(', ');
-                const choice = prompt(`choose a character: ${choices})`);
+                const choice = prompt(`choose a character: ${choices}`);
                 chosenCharacter = characters.find(c => c.name.toLowerCase() === choice.toLowerCase());
     
                 if (!chosenCharacter) {

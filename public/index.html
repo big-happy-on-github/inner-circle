@@ -509,6 +509,7 @@
                     .insert([{ game_code: code, status: "waiting", roles: {} }])
                     .select();
                 id = data[0].id;
+                console.log(id);
                 host = true;
                 addPlayer(code);
             }

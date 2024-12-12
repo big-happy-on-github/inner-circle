@@ -150,90 +150,22 @@
         let id;
         let role;
 
-
-        async function checkGameStatus(gameCode) {
-            const { data, error } = await supabase
-                .from('games')
-                .select('*')
-                .eq('game_code', gameCode)
-                .single();
-
-            if (error || !data) {
-                console.error("Error fetching game status:", error);
-                return;
-            }
-
-            const roles = data.roles || {};
-            const players = await fetchPlayers(gameCode);
-
-            const mafiaAlive = roles.mafia.some(id => players.some(p => p.id === id && p.status === "alive"));
-            const citizensAlive = players.filter(p => roles.citizens.includes(p.id) && p.status === "alive").length;
-
-            if (!mafiaAlive) {
-                alert("Citizens Win!");
-                endGame(gameCode, "Citizens Win");
-            } else if (mafiaAlive && citizensAlive === 1) {
-                alert("Mafia Wins!");
-                endGame(gameCode, "Mafia Wins");
-            }
-        }
-
-        async function endGame(gameCode, result) {
-            const { error } = await supabase
-                .from('games')
-                .update({ status: "ended", result })
-                .eq('game_code', gameCode);
-
-            if (error) {
-                console.error("Error ending the game:", error);
-            } else {
-                alert(`Game Over! ${result}`);
-            }
-        }
-
-        function handleHostTab(gameCode) {
-            window.addEventListener('beforeunload', async () => {
-                if (host) {
-                    await supabase
-                        .from('games')
-                        .update({ status: "ended" })
-                        .eq('game_code', gameCode);
-                }
-            });
-        }
-
-        async function updatePlayerStatus(playerId, status) {
-            const { error } = await supabase
-                .from('players')
-                .update({ status })
-                .eq('id', playerId);
-
-            if (error) {
-                console.error("Error updating player status:", error);
-            }
-        }
-
-        function restrictPlayerInteractions() {
-            alert("You have been eliminated. You can view the game but cannot interact further.");
-            // Disable other interactive UI elements as necessary
-        }
-
-        // Function to handle elimination during the night phase with angel protection
+        // Core functions adjusted
         async function handleNightElimination(gameCode, targetId) {
             const { data: actions, error: actionsError } = await supabase
                 .from('actions')
                 .select('*')
                 .eq('game_code', gameCode)
                 .in('action_type', ['kill', 'protect']);
-        
+    
             if (actionsError) {
                 console.error("Error fetching actions:", actionsError);
                 return;
             }
-        
+    
             const killAction = actions.find(action => action.action_type === 'kill' && action.target_id === targetId);
             const protectAction = actions.find(action => action.action_type === 'protect' && action.target_id === targetId);
-        
+    
             if (killAction && !protectAction) {
                 // Player is killed
                 await updatePlayerStatus(targetId, "eliminated");
@@ -242,68 +174,118 @@
                 // Player is protected by the angel
                 alert(`Player ${targetId} was targeted, but the angel protected them.`);
             }
+    
             checkGameStatus(gameCode);
         }
-        
+    
         async function handleVotingElimination(gameCode) {
-            // Fetch alive players
             const { data: players, error: playersError } = await supabase
                 .from('players')
                 .select('*')
                 .eq('game_code', gameCode)
                 .eq('status', 'alive');
-        
+    
             if (playersError) {
                 console.error("Error fetching alive players:", playersError);
                 return;
             }
-        
+    
             const alivePlayerCount = players.length;
-        
-            // Poll for votes until all players have submitted
+    
             const interval = setInterval(async () => {
                 const { data: actions, error: actionsError } = await supabase
                     .from('actions')
                     .select('*')
                     .eq('game_code', gameCode)
                     .eq('action_type', 'vote');
-        
+    
                 if (actionsError) {
                     console.error("Error fetching votes:", actionsError);
                     return;
                 }
-        
-                // Check if all alive players have voted
+    
                 if (actions.length >= alivePlayerCount) {
-                    clearInterval(interval); // Stop the polling once all votes are in
-        
-                    // Count votes
+                    clearInterval(interval);
+    
                     const voteCounts = actions.reduce((counts, action) => {
                         counts[action.target_id] = (counts[action.target_id] || 0) + 1;
                         return counts;
                     }, {});
-        
-                    // Determine the player with the most votes
+    
                     const [mostVotedPlayer, maxVotes] = Object.entries(voteCounts).reduce(
                         ([currentPlayer, currentVotes], [playerId, votes]) =>
                             votes > currentVotes ? [playerId, votes] : [currentPlayer, currentVotes],
                         [null, 0]
                     );
-        
+    
                     if (mostVotedPlayer) {
-                        // Eliminate the most-voted player
                         await updatePlayerStatus(mostVotedPlayer, "eliminated");
                         alert(`Player ${mostVotedPlayer} has been voted out with ${maxVotes} votes.`);
                     } else {
                         alert("No votes were cast.");
                     }
-        
-                    checkGameStatus(gameCode); // Check if the game has ended
+    
+                    checkGameStatus(gameCode);
                 }
-            }, 1000); // Poll every second
+            }, 1000);
         }
-        
-        // Function to fetch players from Supabase
+    
+        async function updatePlayerStatus(playerId, status) {
+            const { error } = await supabase
+                .from('players')
+                .update({ status })
+                .eq('id', playerId);
+    
+            if (error) {
+                console.error("Error updating player status:", error);
+            }
+        }
+    
+        function restrictPlayerInteractions() {
+            alert("You have been eliminated. You can view the game but cannot interact further.");
+        }
+    
+        // Fixed checkGameStatus to handle edge cases for elimination
+        async function checkGameStatus(gameCode) {
+            const { data, error } = await supabase
+                .from('games')
+                .select('*')
+                .eq('game_code', gameCode)
+                .single();
+    
+            if (error || !data) {
+                console.error("Error fetching game status:", error);
+                return;
+            }
+    
+            const roles = data.roles || {};
+            const players = await fetchPlayers(gameCode);
+    
+            const mafiaAlive = roles.mafia.some(id => players.some(p => p.id === id && p.status === "alive"));
+            const citizensAlive = players.filter(p => roles.citizens.includes(p.id) && p.status === "alive").length;
+    
+            if (!mafiaAlive) {
+                alert("Citizens Win!");
+                endGame(gameCode, "Citizens Win");
+            } else if (mafiaAlive && citizensAlive === 1) {
+                alert("Mafia Wins!");
+                endGame(gameCode, "Mafia Wins");
+            }
+        }
+    
+        async function endGame(gameCode, result) {
+            const { error } = await supabase
+                .from('games')
+                .update({ status: "ended", result })
+                .eq('game_code', gameCode);
+    
+            if (error) {
+                console.error("Error ending the game:", error);
+            } else {
+                alert(`Game Over! ${result}`);
+            }
+        }
+    
         async function fetchPlayers(gameCode) {
             const { data, error } = await supabase
                 .from('players')
@@ -318,25 +300,37 @@
             return data;
         }
     
-        // Function to update the UI with players
-        async function updatePlayersUI(gameCode) {
-            const players = await fetchPlayers(gameCode);
-        
-            // Update the game code display
-            document.getElementById("code").textContent = `game code: ${gameCode}`;
-        
-            // Re-render the players on canvas
-            renderPlayersOnCanvas(players);
+        function setupRealTimeUpdates(gameCode) {
+            supabase
+                .channel('realtime:players')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `game_code=eq.${gameCode}` }, payload => {
+                    if (payload.new.status === "eliminated" && payload.new.id === id) {
+                        restrictPlayerInteractions();
+                    }
+                    updatePlayersUI(gameCode);
+                })
+                .subscribe();
+    
+            supabase
+                .channel('realtime:games')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `game_code=eq.${gameCode}` }, payload => {
+                    if (payload.new.status === "ended") {
+                        alert("The game has ended.");
+                        window.location.reload();
+                    }
+                })
+                .subscribe();
+        }
 
-            if (host) {
-                if (players.length < 4) {
-                    document.getElementById("start").textContent = `cannot start game (+${4-players.length} players needed)`;
-                } else {
-                    document.getElementById("start").textContent = `start game (${players.length}/4)`;
-                    document.getElementById("start").onclick = () => start(gameCode); // Assign a function directly
+        function handleHostTab(gameCode) {
+            window.addEventListener('beforeunload', async () => {
+                if (host) {
+                    await supabase
+                        .from('games')
+                        .update({ status: "ended" })
+                        .eq('game_code', gameCode);
                 }
-                document.getElementById("start").style.display = "block"
-            }
+            });
         }
     
         // Function to render players on the canvas
@@ -631,39 +625,6 @@
                     }
                 }
             }, 1000); // Poll every second
-        }
-        
-        function setupRealTimeUpdates(gameCode) {
-            supabase
-                .channel('realtime:players')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `game_code=eq.${gameCode}` }, payload => {
-                    if (payload.new.status === "eliminated" && payload.new.id === id) {
-                        restrictPlayerInteractions();
-                    } else {
-                        log(payload);
-                    }
-                    updatePlayersUI(gameCode); // Update UI whenever there's a change
-                })
-                .subscribe();
-        
-            supabase
-                .channel('realtime:games')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `game_code=eq.${gameCode}` }, payload => {
-                    log(payload);
-                    if (payload.new.status === "ended") {
-                        handleGameEnd(payload.new);
-                    } else if (payload.new.phase) {
-                        handlePhase(gameCode);
-                    }
-                })
-                .subscribe();
-        
-            supabase
-                .channel('realtime:actions')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'actions', filter: `game_code=eq.${gameCode}` }, payload => {
-                    log(payload);
-                })
-                .subscribe();
         }
 
         async function start(gameCode) {

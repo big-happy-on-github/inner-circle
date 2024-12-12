@@ -427,6 +427,7 @@
                 name: name,
                 image: chosenCharacter.img,
                 game_code: gameCode,
+                status: "alive"
             };
     
             const { data, error } = await supabase
@@ -465,7 +466,7 @@
         
                 // Ensure the target is alive
                 if (targetPlayer.status !== "alive") {
-                    alert(`Action failed: Player "${targetName}" is not alive. Current status: ${targetPlayer.status}`);
+                    alert(`"${targetName}" is not alive`);
                     return false;
                 }
         
@@ -476,15 +477,15 @@
         
                 if (actionError) {
                     console.error("Error performing action:", actionError);
-                    alert("Action could not be performed. Please try again.");
+                    //alert("Action could not be performed. Please try again.");
                     return false;
                 }
         
-                alert(`Action ${actionType} successfully performed on player "${targetName}".`);
+                //alert(`Action ${actionType} successfully performed on player "${targetName}".`);
                 return true;
             } catch (err) {
                 console.error("Unexpected error in performAction:", err);
-                alert("An unexpected error occurred. Please try again.");
+                //alert("An unexpected error occurred. Please try again.");
                 return false;
             }
         }

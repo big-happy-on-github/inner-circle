@@ -306,6 +306,8 @@
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `game_code=eq.${gameCode}` }, payload => {
                     if (payload.new.status === "eliminated" && payload.new.id === id) {
                         restrictPlayerInteractions();
+                    } else {
+                        log();
                     }
                     updatePlayersUI(gameCode);
                 })
@@ -317,6 +319,8 @@
                     if (payload.new.status === "ended") {
                         alert("The game has ended.");
                         window.location.reload();
+                    } else {
+                        log();
                     }
                 })
                 .subscribe();

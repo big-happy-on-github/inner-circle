@@ -447,10 +447,10 @@
     
         async function performAction(actionType, targetName, gameCode) {
             try {
-                // Fetch the target's ID and status by name
+                // Fetch the target's details by name
                 const { data: targetPlayer, error: targetError } = await supabase
                     .from('players')
-                    .select('id, status')
+                    .select('id, name, status')
                     .eq('game_code', gameCode)
                     .eq('name', targetName)
                     .single();
@@ -461,11 +461,11 @@
                     return false;
                 }
         
-                console.log(`Target player status: ${targetPlayer.status}`); // Debugging log
+                console.log(`Target Player Details:`, targetPlayer); // Debugging log for fetched details
         
                 // Ensure the target is alive
                 if (targetPlayer.status !== "alive") {
-                    alert(`Action failed: Player "${targetName}" is not alive.`);
+                    alert(`Action failed: Player "${targetName}" is not alive. Current status: ${targetPlayer.status}`);
                     return false;
                 }
         
@@ -476,11 +476,11 @@
         
                 if (actionError) {
                     console.error("Error performing action:", actionError);
-                    alert("Action could not be performed. Try again.");
+                    alert("Action could not be performed. Please try again.");
                     return false;
                 }
         
-                alert(`Action ${actionType} performed on player "${targetName}".`);
+                alert(`Action ${actionType} successfully performed on player "${targetName}".`);
                 return true;
             } catch (err) {
                 console.error("Unexpected error in performAction:", err);

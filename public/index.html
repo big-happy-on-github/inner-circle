@@ -332,6 +332,27 @@
                 }
             });
         }
+
+        // Function to update the UI with players
+        async function updatePlayersUI(gameCode) {
+            const players = await fetchPlayers(gameCode);
+        
+            // Update the game code display
+            document.getElementById("code").textContent = game code: ${gameCode};
+        
+            // Re-render the players on canvas
+            renderPlayersOnCanvas(players);
+
+            if (host) {
+                if (players.length < 4) {
+                    document.getElementById("start").textContent = cannot start game (+${4-players.length} players needed);
+                } else {
+                    document.getElementById("start").textContent = start game (${players.length}/4);
+                    document.getElementById("start").onclick = () => start(gameCode); // Assign a function directly
+                }
+                document.getElementById("start").style.display = "block"
+            }
+        }
     
         // Function to render players on the canvas
         function renderPlayersOnCanvas(players) {

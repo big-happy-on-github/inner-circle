@@ -319,9 +319,11 @@
                     if (payload.new.status === "ended") {
                         alert("The game has ended.");
                         window.location.reload();
-                    } else {
-                        log(payload); // Pass the payload here
+                    } else if (payload.new.phase && payload.new.phase !== payload.old?.phase) {
+                        // Call handlePhase when phase changes
+                        await handlePhase(gameCode);
                     }
+                    log(payload); // Log payload
                 })
                 .subscribe();
         }
@@ -528,18 +530,12 @@
                     while (!actionSuccess) {
                         const targetName = prompt("Choose a player to eliminate:");
                         actionSuccess = await performAction("kill", targetName, gameCode);
-                        if (!actionSuccess) {
-                            alert("Action failed. Please choose a valid target.");
-                        }
                     }
                 } else if (role === 'angel') {
                     let actionSuccess = false;
                     while (!actionSuccess) {
                         const targetName = prompt("Choose a player to protect:");
                         actionSuccess = await performAction("protect", targetName, gameCode);
-                        if (!actionSuccess) {
-                            alert("Action failed. Please choose a valid target.");
-                        }
                     }
                 }
             } else if (game.phase === 'voting') {
@@ -547,12 +543,11 @@
                 while (!actionSuccess) {
                     const targetName = prompt("Vote to eliminate a player:");
                     actionSuccess = await performAction("vote", targetName, gameCode);
-                    if (!actionSuccess) {
-                        alert("Action failed. Please choose a valid target.");
-                    }
                 }
             }
-            transitionPhase(gameCode);
+        
+            // Transition phase after handling actions
+            await transitionPhase(gameCode);
         }
         
         async function transitionPhase(gameCode) {
@@ -570,8 +565,7 @@
             const currentPhase = game.phase;
             const roles = game.roles;
         
-            // Helper function to check if all actions for the phase are complete
-            async function actionsComplete(phase) {
+            const actionsComplete = async (phase) => {
                 const { data: players, error: playersError } = await supabase
                     .from('players')
                     .select('id, status')
@@ -596,20 +590,47 @@
                 }
         
                 if (phase === 'night') {
-                    // Check if mafia and angel have acted
                     const mafiaActions = actions.filter(action => action.action_type === 'kill');
                     const angelActions = actions.filter(action => action.action_type === 'protect');
                     return mafiaActions.length === roles.mafia.length && angelActions.length === roles.angel.length;
                 }
         
                 if (phase === 'voting') {
-                    // Check if all alive players have voted
                     const votes = actions.filter(action => action.action_type === 'vote');
                     return votes.length === alivePlayers;
                 }
         
-                return true; // For other phases, assume actions are complete
-            }
+                return true;
+            };
+        
+            // Poll until actions are complete
+            const interval = setInterval(async () => {
+                if (await actionsComplete(currentPhase)) {
+                    clearInterval(interval);
+        
+                    let nextPhase;
+                    if (currentPhase === 'night') {
+                        nextPhase = 'voting';
+                    } else if (currentPhase === 'voting') {
+                        nextPhase = 'day';
+                    } else {
+                        nextPhase = 'night';
+                    }
+        
+                    const { error: updateError } = await supabase
+                        .from('games')
+                        .update({ phase: nextPhase })
+                        .eq('game_code', gameCode);
+        
+                    if (updateError) {
+                        console.error("Error transitioning phase:", updateError);
+                    } else {
+                        alert(`Phase transitioned to ${nextPhase}.`);
+                        await handlePhase(gameCode);
+                    }
+                }
+            }, 1000);
+        }
         
             // Wait for all actions to complete before transitioning
             const interval = setInterval(async () => {

@@ -300,7 +300,7 @@
             return data;
         }
     
-        function setupRealTimeUpdates(gameCode) {
+        async function setupRealTimeUpdates(gameCode) {
             supabase
                 .channel('realtime:players')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `game_code=eq.${gameCode}` }, payload => {

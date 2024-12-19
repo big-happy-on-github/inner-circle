@@ -307,12 +307,12 @@
                     if (payload.new.status === "eliminated" && payload.new.id === id) {
                         restrictPlayerInteractions();
                     } else {
-                        log();
+                        log(payload); // Pass the payload here
                     }
                     updatePlayersUI(gameCode);
                 })
                 .subscribe();
-    
+            
             supabase
                 .channel('realtime:games')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `game_code=eq.${gameCode}` }, payload => {
@@ -320,7 +320,7 @@
                         alert("The game has ended.");
                         window.location.reload();
                     } else {
-                        log();
+                        log(payload); // Pass the payload here
                     }
                 })
                 .subscribe();

@@ -300,7 +300,7 @@
             return data;
         }
     
-        async function setupRealTimeUpdates(gameCode) {
+        function setupRealTimeUpdates(gameCode) {
             supabase
                 .channel('realtime:players')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `game_code=eq.${gameCode}` }, payload => {
@@ -321,7 +321,7 @@
                         window.location.reload();
                     } else if (payload.new.phase && payload.new.phase !== payload.old?.phase) {
                         // Call handlePhase when phase changes
-                        await handlePhase(gameCode);
+                        handlePhase(gameCode);
                     }
                     log(payload); // Log payload
                 })
